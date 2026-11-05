@@ -1,22 +1,15 @@
 /* =============================================================================
  * store.js - Trạng thái ứng dụng (Supabase là nguồn dữ liệu chính)
- * LocalStorage chỉ lưu cài đặt giao diện và session tạm cho buổi học.
+ * Chế độ 1 người dùng: không có phiên đăng nhập, dữ liệu là 1 kho duy nhất.
+ * LocalStorage chỉ lưu cài đặt giao diện và vị trí buổi học đang dở.
  * ============================================================================= */
 
-import {
-  loadSettings,
-  loadVocabularyRows,
-  getUserId,
-  startNewAnonymousSession,
-  ensureSession,
-} from './supabase.js';
+import { loadSettings, loadVocabularyRows } from './supabase.js';
 import { saveQueueSnapshot, readQueueSnapshot } from './session-cache.js';
 import { RATING_LABELS } from './scheduler.js';
 
 export const state = {
   ready: false,
-  configError: null,
-  userId: null,
   settings: null,
   rows: [],
   rowsLoadedAt: null,
@@ -49,17 +42,15 @@ export function saveUiPref(key, value) {
 /* KHỞI TẠO                                                                    */
 /* -------------------------------------------------------------------------- */
 export async function bootstrap() {
-  await ensureSession();
-  state.userId = await getUserId();
   state.settings = await loadSettings();
   await refreshAll();
   state.ready = true;
   return state;
 }
 
-/** Tải lại từ vựng + progress + favorite từ Supabase. */
+/** Tải lại từ vựng + tiến trình từ Supabase. */
 export async function refreshAll({ onProgress } = {}) {
-  state.rows = await loadVocabularyRows(state.userId, { onProgress });
+  state.rows = await loadVocabularyRows({ onProgress });
   state.rowsLoadedAt = new Date().toISOString();
   invalidateQueue();
   return state.rows;
@@ -69,14 +60,6 @@ export async function refreshSettings() {
   state.settings = await loadSettings();
   invalidateQueue();
   return state.settings;
-}
-
-/** Tạo phiên ẩn danh mới (sau khôi phục JSON khi chưa có session). */
-export async function resetSession() {
-  await startNewAnonymousSession();
-  state.userId = await getUserId();
-  state.settings = await loadSettings();
-  await refreshAll();
 }
 
 /* -------------------------------------------------------------------------- */
@@ -103,8 +86,8 @@ export function invalidateQueue() {
   saveQueueSnapshot(null);
 }
 
-export function getSavedQueueSnapshot(userId) {
-  return readQueueSnapshot(userId);
+export function getSavedQueueSnapshot() {
+  return readQueueSnapshot();
 }
 
 /* -------------------------------------------------------------------------- */
@@ -142,12 +125,7 @@ export function computeStats(rows = state.rows) {
 export function applyReviewLocally(vocabularyId, schedule) {
   const row = state.rows.find((r) => r.id === vocabularyId);
   if (!row) return null;
-  row.progress = {
-    ...(row.progress || {}),
-    ...schedule,
-    vocabulary_id: vocabularyId,
-    user_id: state.userId,
-  };
+  row.progress = { ...(row.progress || {}), ...schedule, vocabulary_id: vocabularyId };
   return row.progress;
 }
 

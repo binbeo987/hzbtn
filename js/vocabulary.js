@@ -7,9 +7,9 @@ import {
   insertVocabulary,
   updateVocabulary,
   deleteVocabulary,
-  removeFavorite,
+  toggleFavorite,
 } from './api.js';
-import { state, addVocabularyLocal, updateVocabularyLocal, removeVocabularyLocal } from './store.js';
+import { state, addVocabularyLocal, updateVocabularyLocal, removeVocabularyLocal, refreshAll } from './store.js';
 import { toCsvText, CSV_HEADER } from './csv-parser.js';
 import {
   el,
@@ -165,7 +165,7 @@ function renderRows(wrap, rows, approximate = false) {
             title: 'Bỏ yêu thích',
             onclick: async () => {
               try {
-                await removeFavorite(row.id);
+                await toggleFavorite(row.id, false);
                 toast('Đã bỏ yêu thích.', 'success');
                 renderTable();
               } catch (error) {
@@ -287,6 +287,7 @@ async function addVocabularyFlow() {
   if (!data) return;
   try {
     const [row] = await insertVocabulary([data]);
+    await refreshAll();
     addVocabularyLocal({ ...data, ...row, progress: null, favorite: false });
     toast('Đã thêm từ mới.', 'success');
     renderTable();

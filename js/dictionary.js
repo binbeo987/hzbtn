@@ -2,7 +2,7 @@
  * dictionary.js - Tra từ điển: chữ Hán, pinyin (bỏ dấu), nghĩa tiếng Việt
  * ============================================================================= */
 
-import { searchVocabulary, addFavorite, removeFavorite } from './api.js';
+import { searchVocabulary, toggleFavorite } from './api.js';
 import { state, setFavoriteLocal } from './store.js';
 import { esc, el, toast, speak, speakable, labelTopic, getErrorMessage, debounce, labelHsk } from './ui.js';
 
@@ -186,12 +186,11 @@ export function renderEntry(row, { compact = false } = {}) {
       const isFav = favBtn.classList.contains('is-on');
       favBtn.disabled = true;
       try {
-        if (isFav) await removeFavorite(row.id);
-        else await addFavorite(row.id);
-        favBtn.classList.toggle('is-on', !isFav);
-        setFavoriteLocal(row.id, !isFav);
-        favBtn.textContent = !isFav ? '★ Yêu thích' : '☆ Yêu thích';
-        toast(!isFav ? 'Đã thêm vào yêu thích.' : 'Đã bỏ yêu thích.', 'success', 1800);
+        const result = await toggleFavorite(row.id, !isFav);
+        favBtn.classList.toggle('is-on', result.favorite);
+        setFavoriteLocal(row.id, result.favorite);
+        favBtn.textContent = result.favorite ? '★ Yêu thích' : '☆ Yêu thích';
+        toast(result.favorite ? 'Đã thêm vào yêu thích.' : 'Đã bỏ yêu thích.', 'success', 1800);
       } catch (error) {
         toast(getErrorMessage(error), 'error');
       } finally {

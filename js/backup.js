@@ -1,29 +1,14 @@
 /* =============================================================================
- * backup.js - Sao lưu & khôi phục dữ liệu
+ * backup.js - Sao lưu & khôi phục dữ liệu (1 người dùng, không đăng nhập)
  * - Xuất JSON đầy đủ: từ vựng, learning_progress, review_records, daily_sessions,
- *   favorites + settings.
- * - Khôi phục: kiểm tra cấu trúc → xem trước → xác nhận → ghi theo batch.
+ *   favorites + settings (một lần gọi RPC get_backup).
+ * - Khôi phục: kiểm tra cấu trúc → xem trước → xác nhận → RPC restore_backup.
  *   Không ghi đè dữ liệu nếu người dùng chưa xác nhận.
  * ============================================================================= */
 
-import {
-  listAllVocabulary,
-  listProgress,
-  listReviewRecords,
-  listSessions,
-  listFavorites,
-  insertVocabulary,
-  restoreProgressRows,
-  restoreReviewRecords,
-  insertFavorites,
-  upsertSessions,
-  updateSettings,
-  deleteAllUserData,
-  findExistingWords,
-} from './api.js';
+import { getFullBackup, listProgress, listReviewRecords, listSessions, restoreBackup, deleteAllUserData } from './api.js';
 import { state, refreshAll, refreshSettings } from './store.js';
 import { toCsvText, CSV_HEADER } from './csv-parser.js';
-import { getSession } from './supabase.js';
 import { APP_CONFIG } from './config.js';
 import { invalidateCalendarCache } from './calendar.js';
 import {
@@ -72,35 +57,11 @@ export function mountBackup() {
 /* -------------------------------------------------------------------------- */
 /* EXPORT                                                                      */
 /* -------------------------------------------------------------------------- */
-async function collectFullBackup() {
-  const [vocabulary, progress, reviews, sessions, favorites, session] = await Promise.all([
-    listAllVocabulary(),
-    listProgress(),
-    listReviewRecords({}),
-    listSessions({}),
-    listFavorites(),
-    getSession(),
-  ]);
-  return {
-    app: 'han-ngu',
-    version: APP_CONFIG.version,
-    exported_at: new Date().toISOString(),
-    user_id: session?.user?.id || null,
-    settings: state.settings,
-    vocabulary,
-    learning_progress: progress,
-    review_records: reviews,
-    daily_sessions: sessions,
-    favorites,
-  };
-}
-
 async function exportFullJson(button) {
   setBusy(button, true, 'Đang chuẩn bị…');
   try {
-    const data = await collectFullBackup();
-    const stamp = new Date().toISOString().slice(0, 10);
-    downloadBlob(`hanngu-backup-${stamp}.json`, JSON.stringify(data, null, 2));
+    const data = await getFullBackup();
+    downloadBlob(`hanngu-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(data, null, 2));
     toast('Đã xuất bản sao lưu JSON.', 'success');
   } catch (error) {
     toast(getErrorMessage(error), 'error');
@@ -112,15 +73,19 @@ async function exportFullJson(button) {
 async function exportProgressJson(button) {
   setBusy(button, true, 'Đang chuẩn bị…');
   try {
-    const [progress, reviews, sessions] = await Promise.all([listProgress(), listReviewRecords({}), listSessions({})]);
+    const [learning_progress, review_records, daily_sessions] = await Promise.all([
+      listProgress(),
+      listReviewRecords(),
+      listSessions(),
+    ]);
     const data = {
       app: 'han-ngu',
       version: APP_CONFIG.version,
       kind: 'history',
       exported_at: new Date().toISOString(),
-      learning_progress: progress,
-      review_records: reviews,
-      daily_sessions: sessions,
+      learning_progress,
+      review_records,
+      daily_sessions,
     };
     downloadBlob(`hanngu-history-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(data, null, 2));
     toast('Đã xuất lịch sử học tập.', 'success');
@@ -284,98 +249,21 @@ async function runRestore(button) {
   if (!confirmed) return;
 
   setBusy(button, true, 'Đang khôi phục…');
-  const { data } = imported;
-  const report = [];
   try {
-    if (replace) {
-      await deleteAllUserData();
-      state.rows = [];
-    }
-
-    // 1. Từ vựng
-    const idMap = new Map();
-    const seenWords = new Set();
-    const vocabRows = [];
-    for (const v of data.vocabulary || []) {
-      if (!v?.word || seenWords.has(v.word)) continue;
-      seenWords.add(v.word);
-      vocabRows.push({
-        word: v.word,
-        pinyin: v.pinyin || '',
-        pos: v.pos || '',
-        meaning: v.meaning || '',
-        hsk: v.hsk || '',
-        topic: v.topic || '',
-        example: v.example || '',
-        example_pinyin: v.example_pinyin || '',
-        example_meaning: v.example_meaning || '',
-      });
-    }
-    if (vocabRows.length) {
-      const inserted = await insertVocabularyBatched(vocabRows);
-      for (const row of inserted) {
-        const original = (data.vocabulary || []).find((v) => v.word === row.word);
-        if (original?.id) idMap.set(original.id, row.id);
-      }
-      report.push(`Đã thêm ${inserted.length} từ vựng.`);
-    }
-
-    const existing = await findExistingWords(vocabRows.map((v) => v.word));
-    const resolveVocabId = (oldId) => {
-      if (idMap.has(oldId)) return idMap.get(oldId);
-      const oldVocab = (data.vocabulary || []).find((v) => v.id === oldId);
-      return oldVocab ? existing.get(oldVocab.word) || null : null;
-    };
-
-    // 2. Tiến trình học
-    const progressRows = (data.learning_progress || [])
-      .map((p) => ({ ...toProgressRow(p), vocabulary_id: resolveVocabId(p.vocabulary_id) }))
-      .filter((p) => p.vocabulary_id);
-    const progressResult = await restoreProgressRows(progressRows);
-    report.push(`Khôi phục tiến trình: ${progressResult.ok} dòng${progressResult.failed.length ? `, ${progressResult.failed.length} lỗi` : ''}.`);
-
-    // 3. Lịch sử ôn tập
-    const reviewRows = (data.review_records || [])
-      .map((r) => {
-        const newId = resolveVocabId(r.vocabulary_id);
-        if (!newId) return null;
-        const { user_id, ...rest } = r;
-        return { ...rest, vocabulary_id: newId };
-      })
-      .filter(Boolean);
-    const reviewResult = await restoreReviewRecords(reviewRows);
-    report.push(`Khôi phục lịch sử ôn: ${reviewResult.ok} lượt${reviewResult.failed.length ? `, ${reviewResult.failed.length} lỗi` : ''}.`);
-
-    // 4. Yêu thích
-    const favIds = (data.favorites || []).map((f) => resolveVocabId(f.vocabulary_id)).filter(Boolean);
-    if (favIds.length) await insertFavorites(favIds);
-    report.push(`Khôi phục ${favIds.length} từ yêu thích.`);
-
-    // 5. Buổi học
-    const sessionRows = (data.daily_sessions || []).map(({ user_id, id, ...rest }) => rest);
-    if (sessionRows.length) await upsertSessions(sessionRows);
-    report.push(`Khôi phục ${sessionRows.length} buổi học.`);
-
-    // 6. Cài đặt
-    if (data.settings) {
-      try {
-        await updateSettings({
-          new_words_per_day: data.settings.new_words_per_day ?? 10,
-          max_words_per_day: data.settings.max_words_per_day ?? 30,
-          preferred_study_time: data.settings.preferred_study_time || null,
-          timezone: state.settings?.timezone,
-        });
-        report.push('Đã áp dụng cài đặt học tập.');
-      } catch (error) {
-        report.push(`Không áp dụng được cài đặt: ${error.message}`);
-      }
-    }
-
+    if (replace) await deleteAllUserData();
+    const counts = await restoreBackup(imported.data);
     await refreshAll();
     await refreshSettings();
     invalidateCalendarCache();
     imported = null;
-    document.getElementById('restore-preview').innerHTML = `<div class="restore-preview"><ul class="check-list">${report
+    const lines = [
+      `Tổng từ vựng: ${counts?.vocabulary ?? '—'}`,
+      `Tiến trình học: ${counts?.learning_progress ?? '—'}`,
+      `Lịch sử ôn: ${counts?.review_records ?? '—'}`,
+      `Buổi học: ${counts?.daily_sessions ?? '—'}`,
+      `Yêu thích: ${counts?.favorites ?? '—'}`,
+    ];
+    document.getElementById('restore-preview').innerHTML = `<div class="restore-preview"><ul class="check-list">${lines
       .map((r) => `<li class="ok">${esc(r)}</li>`)
       .join('')}</ul></div>`;
     toast('Khôi phục hoàn tất.', 'success');
@@ -386,41 +274,6 @@ async function runRestore(button) {
   }
 }
 
-function toProgressRow(p) {
-  return {
-    status: p.status || 'new',
-    first_learned_at: p.first_learned_at || null,
-    last_reviewed_at: p.last_reviewed_at || null,
-    next_review_at: p.next_review_at || null,
-    review_count: p.review_count || 0,
-    correct_count: p.correct_count || 0,
-    incorrect_count: p.incorrect_count || 0,
-    repetition: p.repetition || 0,
-    easiness_factor: p.easiness_factor ?? 2.5,
-    interval_days: p.interval_days ?? 0,
-  };
-}
-
-async function insertVocabularyBatched(rows, batchSize = 500) {
-  const all = [];
-  for (let i = 0; i < rows.length; i += batchSize) {
-    const batch = rows.slice(i, i + batchSize);
-    try {
-      all.push(...(await insertVocabulary(batch)));
-    } catch (error) {
-      if (!/duplicate key|unique/i.test(error.message || '')) throw error;
-      for (const row of batch) {
-        try {
-          all.push(...(await insertVocabulary([row])));
-        } catch {
-          // trùng với kho hiện có hoặc dòng lỗi: bỏ qua
-        }
-      }
-    }
-  }
-  return all;
-}
-
 /* -------------------------------------------------------------------------- */
 /* DELETE ALL                                                                  */
 /* -------------------------------------------------------------------------- */
@@ -428,7 +281,7 @@ async function deleteEverything() {
   const ok = await confirmDialog({
     title: 'Xoá toàn bộ dữ liệu',
     message:
-      'Tất cả từ vựng và lịch sử học của phiên này sẽ bị xoá vĩnh viễn trên Supabase. Bạn nên xuất JSON sao lưu trước.',
+      'Tất cả từ vựng và lịch sử học sẽ bị xoá vĩnh viễn trên Supabase. Bạn nên xuất JSON sao lưu trước.',
     okText: 'Xoá vĩnh viễn',
     danger: true,
   });

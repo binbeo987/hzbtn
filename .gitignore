@@ -14,3 +14,9 @@ tests/tmp/
 # Anh chup kiem thu tu dong
 assets/smoke-*.png
 assets/check-*.png
+
+# Ảnh kiểm tra giao diện
+.shots/
+
+# Tài liệu làm việc cục bộ
+CLAUDE.txt

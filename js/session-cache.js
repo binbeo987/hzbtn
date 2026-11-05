@@ -6,24 +6,22 @@
 
 import { localDayKey } from './scheduler.js';
 
-const KEY = 'hanngu:queue-snapshot:v1';
+const KEY = 'hanngu:queue-snapshot:v2';
 
 export function saveQueueSnapshot(snapshot) {
   try {
     if (!snapshot) {
       localStorage.removeItem(KEY);
+      localStorage.removeItem('hanngu:queue-snapshot:v1');
       return;
     }
-    localStorage.setItem(
-      KEY,
-      JSON.stringify({ ...snapshot, savedAt: new Date().toISOString(), userId: snapshot.userId || null }),
-    );
+    localStorage.setItem(KEY, JSON.stringify({ ...snapshot, savedAt: new Date().toISOString() }));
   } catch {
     // storage đầy hoặc bị trình duyệt chặn
   }
 }
 
-export function readQueueSnapshot(userId) {
+export function readQueueSnapshot() {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
@@ -31,7 +29,6 @@ export function readQueueSnapshot(userId) {
     if (!data || !Array.isArray(data.items)) return null;
     const today = localDayKey(new Date());
     if (data.dayKey && data.dayKey !== today) return null;
-    if (userId && data.userId && data.userId !== userId) return null;
     return data;
   } catch {
     return null;

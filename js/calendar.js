@@ -47,7 +47,7 @@ export async function renderCalendar() {
   try {
     if (!recordsCache) {
       try {
-        recordsCache = await listReviewRecords({});
+        recordsCache = await listReviewRecords();
       } catch {
         recordsCache = [];
       }

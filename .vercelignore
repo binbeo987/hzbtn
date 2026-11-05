@@ -24,3 +24,5 @@ database/
 .gitignore
 smoke-*.png
 check-*.png
+
+.shots/

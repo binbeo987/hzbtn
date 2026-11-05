@@ -119,8 +119,7 @@ code {
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: saturate(180%) blur(10px);
+  background: #ffffff;
   border-bottom: 1px solid var(--line);
 }
 
@@ -128,7 +127,7 @@ code {
   height: var(--header-h);
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .brand {
@@ -136,53 +135,108 @@ code {
   align-items: center;
   gap: 0.65rem;
   color: var(--ink-900);
+  flex: 0 0 auto;
 }
 .brand:hover { text-decoration: none; }
 
 .brand-mark {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
   display: grid;
   place-items: center;
   background: linear-gradient(135deg, var(--blue-600), var(--blue-500));
   color: #fff;
   font-family: var(--font-han);
-  font-size: 1.35rem;
+  font-size: 1.3rem;
   font-weight: 700;
   box-shadow: var(--shadow-sm);
 }
 
-.brand-text { display: flex; flex-direction: column; line-height: 1.15; }
-.brand-text strong { font-size: 1.05rem; }
-.brand-text small { color: var(--ink-500); font-size: 0.72rem; }
+.brand-text { display: flex; flex-direction: column; line-height: 1.12; }
+.brand-text strong { font-size: 1.02rem; }
+.brand-text small { color: var(--ink-500); font-size: 0.7rem; }
 
+/* ---------- Menu dropdown ---------- */
 .main-nav {
   display: flex;
-  gap: 0.25rem;
+  align-items: center;
+  gap: 0.15rem;
   margin-left: auto;
-  overflow-x: auto;
-  scrollbar-width: none;
 }
-.main-nav::-webkit-scrollbar { display: none; }
 
-.main-nav a,
-.mobile-nav a {
-  padding: 0.5rem 0.8rem;
-  border-radius: 999px;
+.menu-group { position: relative; }
+
+.menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.7rem;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
   color: var(--ink-700);
-  font-size: 0.92rem;
-  font-weight: 500;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
   white-space: nowrap;
 }
-.main-nav a:hover,
-.mobile-nav a:hover { background: var(--blue-50); color: var(--blue-700); text-decoration: none; }
-.main-nav a.is-active,
-.mobile-nav a.is-active { background: var(--blue-600); color: #fff; }
+.menu-trigger:hover { background: var(--gray-soft); color: var(--blue-700); }
+.menu-trigger[aria-expanded="true"] { background: var(--blue-50); color: var(--blue-700); }
+.menu-group.has-active .menu-trigger { color: var(--blue-700); }
+.menu-trigger:focus-visible { outline: 3px solid var(--blue-200); outline-offset: 2px; }
+
+.menu-icon { font-size: 0.9rem; line-height: 1; }
+.menu-caret {
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 0.15s ease;
+  opacity: 0.7;
+}
+.menu-trigger[aria-expanded="true"] .menu-caret { transform: rotate(225deg) translateY(-1px); }
+
+.dropdown-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 232px;
+  padding: 0.4rem;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 50;
+}
+.menu-group.is-open .dropdown-panel { display: flex; animation: menu-in 0.14s ease; }
+@keyframes menu-in { from { opacity: 0; transform: translateY(-4px); } }
+
+.dropdown-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  color: var(--ink-900);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.dropdown-item:hover,
+.dropdown-item:focus-visible { background: var(--blue-50); color: var(--blue-700); text-decoration: none; outline: none; }
+.dropdown-item.is-active { background: var(--blue-600); color: #fff; }
+.dropdown-item.is-active .di-hint { color: var(--blue-100); }
+.di-hint { font-size: 0.72rem; font-weight: 500; color: var(--ink-400); }
+
+.header-cta { margin-left: 0.4rem; }
 
 .nav-toggle {
   display: none;
-  margin-left: auto;
   width: 42px;
   height: 42px;
   border: 1px solid var(--line);
@@ -190,6 +244,7 @@ code {
   background: #fff;
   padding: 10px;
   cursor: pointer;
+  margin-left: auto;
 }
 .nav-toggle span {
   display: block;
@@ -203,15 +258,54 @@ code {
 .nav-toggle[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
 .nav-toggle[aria-expanded="true"] span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
 
+/* Drawer trên tablet/phone */
 .mobile-nav {
+  position: fixed;
+  inset: var(--header-h) 0 auto auto;
+  width: min(320px, 88vw);
+  max-height: calc(100dvh - var(--header-h));
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  padding: 0.5rem clamp(1rem, 3vw, 1.75rem) 1rem;
-  border-top: 1px solid var(--line);
+  gap: 0.15rem;
+  padding: 0.75rem;
+  border-left: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  border-radius: 0 0 0 var(--radius-lg);
   background: #fff;
+  box-shadow: var(--shadow-lg);
+  z-index: 60;
 }
-.mobile-nav a { border-radius: var(--radius); padding: 0.7rem 0.9rem; }
-
+.mobile-nav[hidden] { display: none; }
+.mobile-nav a {
+  display: block;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius);
+  color: var(--ink-700);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+.mobile-nav a:hover { background: var(--blue-50); color: var(--blue-700); text-decoration: none; }
+.mobile-nav a.is-active { background: var(--blue-600); color: #fff; }
+.m-group { display: flex; flex-direction: column; gap: 2px; padding-bottom: 0.35rem; }
+.m-group + .m-group { border-top: 1px solid var(--line); padding-top: 0.45rem; }
+.m-group-title {
+  padding: 0.35rem 0.85rem 0.15rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-400);
+}
+.drawer-backdrop {
+  position: fixed;
+  inset: var(--header-h) 0 0 0;
+  background: rgba(15, 23, 42, 0.25);
+  z-index: 45;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
 /* ---------- Layout ---------- */
 .app-main { padding-block: 1.75rem 3rem; min-height: 60vh; }
 

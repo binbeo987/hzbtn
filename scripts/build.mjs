@@ -7,12 +7,12 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim();
+const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://ohicfsquvraayliscprg.supabase.co').trim();
 const anonKey = (
   process.env.SUPABASE_ANON_KEY ||
   process.env.VITE_SUPABASE_ANON_KEY ||
   process.env.SUPABASE_PUBLISHABLE_KEY ||
-  ''
+  'sb_publishable_maYsjTviq5zdUI5IVTTi3g_2rydIS3Q'
 ).trim();
 
 if (url && /service_role/.test(anonKey)) {

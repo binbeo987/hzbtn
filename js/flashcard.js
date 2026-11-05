@@ -47,7 +47,7 @@ export function planToday() {
 export function restoreOrBuildQueue() {
   const tz = state.settings?.timezone || undefined;
   const today = localDayKey(new Date(), tz);
-  const snapshot = getSavedQueueSnapshot(state.userId);
+  const snapshot = getSavedQueueSnapshot();
 
   if (snapshot && snapshot.dayKey === today && snapshot.items?.length) {
     const byId = new Map(state.rows.map((r) => [r.id, r]));
@@ -107,7 +107,6 @@ function persist() {
     ratings: current.ratings,
     startedAt: current.startedAt,
     counts: current.counts,
-    userId: state.userId,
   });
 }
 

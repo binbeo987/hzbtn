@@ -1,9 +1,10 @@
 /* =============================================================================
- * settings.js - Trang Cài đặt: lịch học hằng ngày, thông tin phiên, sao lưu
+ * settings.js - Cài đặt: lịch học hằng ngày, mã truy cập
  * ============================================================================= */
 
 import { updateSettings } from './api.js';
-import { state, refreshSettings } from './store.js';
+import { state, refreshSettings, refreshAll } from './store.js';
+import { getAccessKey, setAccessKey } from './supabase.js';
 import { APP_CONFIG } from './config.js';
 import { toast, getErrorMessage, formatDayKey, setBusy } from './ui.js';
 
@@ -14,6 +15,9 @@ export function mountSettings() {
   mounted = true;
   const form = document.getElementById('settings-form');
   form?.addEventListener('submit', saveSettings);
+
+  const accessForm = document.getElementById('access-form');
+  accessForm?.addEventListener('submit', saveAccessKey);
 }
 
 export function renderSettings() {
@@ -33,9 +37,6 @@ export function renderSettings() {
       : '';
   }
 
-  const uid = document.getElementById('settings-user-id');
-  if (uid) uid.textContent = state.userId || '—';
-
   const tz = document.getElementById('settings-timezone');
   if (tz) tz.textContent = Intl.DateTimeFormat().resolvedOptions().timeZone || '—';
 
@@ -44,6 +45,29 @@ export function renderSettings() {
 
   const version = document.getElementById('settings-version');
   if (version) version.textContent = APP_CONFIG.version;
+
+  const keyInput = document.getElementById('set-access-key');
+  if (keyInput) keyInput.value = getAccessKey();
+}
+
+async function saveAccessKey(event) {
+  event.preventDefault();
+  const input = document.getElementById('set-access-key');
+  const button = document.getElementById('access-save');
+  const previous = getAccessKey();
+  const next = input.value.trim();
+  setBusy(button, true, 'Đang kiểm tra…');
+  try {
+    setAccessKey(next);
+    await refreshAll();
+    await refreshSettings();
+    toast(next ? 'Mã truy cập hợp lệ và đã được lưu.' : 'Đã xoá mã truy cập khỏi máy này.', 'success');
+  } catch (error) {
+    setAccessKey(previous);
+    toast(`Mã truy cập không đúng hoặc không kết nối được: ${getErrorMessage(error)}`, 'error', 5000);
+  } finally {
+    setBusy(button, false);
+  }
 }
 
 async function saveSettings(event) {

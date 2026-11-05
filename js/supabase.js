@@ -1,13 +1,16 @@
 /* =============================================================================
- * supabase.js - Khởi tạo client + Anonymous Auth + tải toàn bộ trạng thái học
+ * supabase.js - Khởi tạo client + mã truy cập (chế độ 1 người dùng)
+ * Không có đăng nhập, không có phiên ẩn danh: dữ liệu là 1 kho duy nhất,
+ * truy cập qua các hàm RPC (xem database/rls.sql).
  * ============================================================================= */
 
 import { loadConfig, isConfigured } from './config.js';
-import { chunk } from './ui.js';
 
 let client = null;
 let config = null;
-let sessionPromise = null;
+let accessKey = '';
+
+const ACCESS_KEY_STORAGE = 'hanngu:access-key';
 
 export function getClient() {
   if (!client) throw new Error('Supabase client chưa được khởi tạo.');
@@ -27,10 +30,27 @@ export function isReady() {
   return Boolean(client);
 }
 
-/**
- * Khởi tạo Supabase client, khôi phục session cũ hoặc tạo phiên ẩn danh.
- * Không hiển thị form đăng nhập.
- */
+/** Mã truy cập (nếu Supabase có đặt app_access_key). */
+export function getAccessKey() {
+  if (accessKey) return accessKey;
+  try {
+    accessKey = localStorage.getItem(ACCESS_KEY_STORAGE) || '';
+  } catch {
+    accessKey = '';
+  }
+  return accessKey;
+}
+
+export function setAccessKey(value) {
+  accessKey = String(value || '').trim();
+  try {
+    if (accessKey) localStorage.setItem(ACCESS_KEY_STORAGE, accessKey);
+    else localStorage.removeItem(ACCESS_KEY_STORAGE);
+  } catch {
+    /* trình duyệt chặn storage */
+  }
+}
+
 export async function initSupabase() {
   config = await loadConfig();
   if (!isConfigured(config)) {
@@ -45,82 +65,37 @@ export async function initSupabase() {
   }
 
   client = lib.createClient(config.supabaseUrl, config.supabaseAnonKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: false,
-      storageKey: 'hanngu-auth',
-    },
-    global: {
-      headers: { 'x-application-name': 'han-ngu-dictionary' },
-    },
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    global: { headers: { 'x-application-name': 'han-ngu-dictionary' } },
   });
-
   return client;
 }
 
-/**
- * Bảo đảm có phiên đăng nhập ẩn danh.
- * - Có session trên trình duyệt → dùng lại (mở lại website vẫn còn dữ liệu).
- * - Chưa có → gọi signInAnonymously() → tạo auth.uid() mới.
- */
-export async function ensureSession({ force = false } = {}) {
-  if (!client) throw new Error('Supabase chưa khởi tạo.');
-  if (sessionPromise && !force) return sessionPromise;
+/** RPC kèm mã truy cập; chuẩn hoá lỗi dễ hiểu cho người dùng. */
+export async function rpc(fn, args = {}) {
+  const { data, error } = await getClient().rpc(fn, { ...args, p_key: getAccessKey() || null });
+  if (error) throw decorateError(error);
+  return data;
+}
 
-  sessionPromise = (async () => {
-    const { data: sessionData, error: sessionError } = await client.auth.getSession();
-    if (sessionError) throw sessionError;
-    if (sessionData?.session?.user) return sessionData.session;
-
-    const timeout = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Tạo phiên ẩn danh quá lâu. Kiểm tra mạng và cấu hình Supabase.')), 20000);
-    });
-
-    const signIn = client.auth.signInAnonymously().then(({ data, error }) => {
-      if (error) throw error;
-      if (!data?.session) throw new Error('Supabase không trả về phiên ẩn danh.');
-      return data.session;
-    });
-
-    return Promise.race([signIn, timeout]);
-  })();
-
-  try {
-    return await sessionPromise;
-  } catch (error) {
-    sessionPromise = null;
-    throw error;
+function decorateError(error) {
+  const message = error?.message || '';
+  if (/invalid access key/i.test(message)) {
+    const err = new Error('ACCESS_KEY_REQUIRED');
+    err.code = 'ACCESS_KEY_REQUIRED';
+    err.detail = message;
+    return err;
   }
+  return error;
 }
 
-export async function getSession() {
-  if (!client) return null;
-  const { data } = await client.auth.getSession();
-  return data?.session || null;
-}
-
-export async function getUserId() {
-  const session = await getSession();
-  return session?.user?.id || null;
-}
-
-export function onAuthStateChange(callback) {
-  if (!client) return { unsubscribe() {} };
-  const { data } = client.auth.onAuthStateChange((event, session) => callback(event, session));
-  return data.subscription;
-}
-
-/** Đọc settings của user; nếu chưa có thì tạo default qua RPC. */
-export async function loadSettings() {
-  const { data, error } = await client.rpc('ensure_learning_settings');
-  if (error) throw error;
-  return normalizeSettings(data);
+function isAccessKeyError(error) {
+  return error?.code === 'ACCESS_KEY_REQUIRED' || /invalid access key/i.test(error?.message || '');
 }
 
 export function normalizeSettings(row) {
   return {
-    user_id: row?.user_id,
+    id: true,
     new_words_per_day: Number(row?.new_words_per_day ?? 10),
     max_words_per_day: Number(row?.max_words_per_day ?? 30),
     study_start_date: row?.study_start_date || null,
@@ -130,72 +105,33 @@ export function normalizeSettings(row) {
   };
 }
 
-/** Tải toàn bộ từ vựng + tiến trình + favorite (phân trang để vượt giới hạn 1000 dòng). */
-export async function loadVocabularyRows(userId, { onProgress } = {}) {
-  const pageSize = 1000;
-  const all = [];
-  let from = 0;
-  for (;;) {
-    let query = client
-      .from('vocabulary')
-      .select(
-        'id,user_id,word,pinyin,pos,meaning,hsk,topic,example,example_pinyin,example_meaning,created_at,updated_at,learning_progress(*),favorites(user_id,vocabulary_id)',
-      )
-      .order('created_at', { ascending: true })
-      .order('id', { ascending: true })
-      .range(from, from + pageSize - 1);
-    if (userId) query = query.eq('user_id', userId);
-    const { data, error } = await query;
-    if (error) throw error;
-    all.push(...(data || []));
-    onProgress?.(all.length);
-    if (!data || data.length < pageSize) break;
-    from += pageSize;
-  }
-
-  return all.map((row) => {
-    const progress = Array.isArray(row.learning_progress) ? row.learning_progress[0] || null : row.learning_progress;
-    const favorite = Array.isArray(row.favorites) ? row.favorites.length > 0 : Boolean(row.favorites);
-    const { learning_progress: _p, favorites: _f, ...vocab } = row;
-    return { ...vocab, progress: progress || null, favorite };
-  });
+/** Cài đặt học tập (bảng luôn có đúng 1 dòng, schema.sql tạo sẵn). */
+export async function loadSettings() {
+  const backup = await rpc('get_backup');
+  return normalizeSettings(backup?.settings);
 }
 
-/**
- * Tải tiến trình theo danh sách vocabulary_id (dùng khi mở buổi học thay thế
- * toàn bộ kho chưa đồng bộ).
- */
-export async function loadProgressFor(userId, vocabularyIds) {
-  const out = new Map();
-  for (const ids of chunk(vocabularyIds, 200)) {
-    let query = client
-      .from('learning_progress')
-      .select('*')
-      .in('vocabulary_id', ids);
-    if (userId) query = query.eq('user_id', userId);
-    const { data, error } = await query;
-    if (error) throw error;
-    for (const row of data || []) out.set(row.vocabulary_id, row);
-  }
-  return out;
-}
-
-/** Đăng xuất phiên ẩn danh hiện tại (chỉ dùng trong Cài đặt, kèm cảnh báo mất dữ liệu). */
-export async function signOut() {
-  sessionPromise = null;
-  const { error } = await client.auth.signOut();
-  if (error) throw error;
-}
-
-/** Tạo phiên ẩn danh mới + settings mới. Dùng khi khôi phục từ JSON. */
-export async function startNewAnonymousSession() {
-  sessionPromise = null;
+/** Toàn bộ kho từ vựng + tiến trình, dùng để tính buổi học và lịch. */
+export async function loadVocabularyRows() {
+  let data;
   try {
-    await client.auth.signOut();
-  } catch {
-    /* bỏ qua */
+    data = await rpc('get_study_rows');
+  } catch (error) {
+    if (isAccessKeyError(error)) throw error;
+    throw error;
   }
-  return ensureSession({ force: true });
+
+  return (data || []).map((row) => ({
+    id: row.id,
+    word: row.word,
+    pinyin: row.pinyin,
+    meaning: row.meaning,
+    hsk: row.hsk,
+    topic: row.topic,
+    created_at: row.created_at,
+    progress: row.progress || null,
+    favorite: Boolean(row.progress?.favorite),
+  }));
 }
 
-export { isConfigured };
+export { isAccessKeyError, isConfigured };

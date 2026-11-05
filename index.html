@@ -2,29 +2,17 @@
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Hán Ngữ – Từ điển & Ôn tập từ vựng tiếng Trung</title>
-    <meta
-      name="description"
-      content="Từ điển Trung – Việt, flashcard và lịch ôn tập từ vựng tiếng Trung tự động cho người Việt."
-    />
+    <meta name="description" content="Từ điển Trung – Việt, flashcard và lịch ôn tập từ vựng tiếng Trung tự động cho người Việt." />
     <meta name="theme-color" content="#2563eb" />
 
     <!--
-    Cấu hình thay thế khi chạy tĩnh không có Vercel (dev). Trên Vercel, giá trị
-    được inject qua /api/config + /js/env.js từ biến môi trường — không sửa ở đây.
-  -->
-    <meta
-      name="supabase-url"
-      content="https://ohicfsquvraayliscprg.supabase.co"
-    />
-    <meta
-      name="supabase-anon-key"
-      content="sb_publishable_maYsjTviq5zdUI5IVTTi3g_2rydIS3Q"
-    />
+      Cấu hình dự phòng khi chạy tĩnh không có Vercel (dev). Trên Vercel giá trị
+      lấy từ biến môi trường qua /api/config + /js/env.js — không sửa ở đây.
+    -->
+    <meta name="supabase-url" content="https://ohicfsquvraayliscprg.supabase.co" />
+    <meta name="supabase-anon-key" content="sb_publishable_maYsjTviq5zdUI5IVTTi3g_2rydIS3Q" />
 
     <link rel="manifest" href="./assets/manifest.json" />
     <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
@@ -32,21 +20,8 @@
     <link rel="stylesheet" href="./css/style.css" />
     <link rel="stylesheet" href="./css/responsive.css" />
     <style>
-      /* Spinner hiển thị ngay cả khi CSS chính chưa tải xong */
-      .boot-spinner {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        border: 3px solid #dbeafe;
-        border-top-color: #2563eb;
-        margin: 0 auto 1rem;
-        animation: hb-spin 0.8s linear infinite;
-      }
-      @keyframes hb-spin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
+      .boot-spinner{width:40px;height:40px;border-radius:50%;border:3px solid #dbeafe;border-top-color:#2563eb;margin:0 auto 1rem;animation:hb-spin .8s linear infinite}
+      @keyframes hb-spin{to{transform:rotate(360deg)}}
     </style>
   </head>
   <body>
@@ -54,12 +29,7 @@
 
     <header class="app-header">
       <div class="container header-inner">
-        <a
-          class="brand"
-          href="#home"
-          data-nav="home"
-          aria-label="Hán Ngữ – Trang chủ"
-        >
+        <a class="brand" href="#home" data-nav="home" aria-label="Hán Ngữ – Trang chủ">
           <span class="brand-mark" aria-hidden="true">汉</span>
           <span class="brand-text">
             <strong>Hán Ngữ</strong>
@@ -67,42 +37,25 @@
           </span>
         </a>
 
-        <nav class="main-nav" aria-label="Menu chính">
-          <a href="#home" data-nav="home">Trang chủ</a>
-          <a href="#dictionary" data-nav="dictionary">Tra từ</a>
-          <a href="#review" data-nav="review">Ôn tập hôm nay</a>
-          <a href="#vocabulary" data-nav="vocabulary">Kho từ vựng</a>
-          <a href="#calendar" data-nav="calendar">Lịch ôn tập</a>
-          <a href="#settings" data-nav="settings">Cài đặt</a>
-        </nav>
+        <!-- Menu dropdown: Học / Từ vựng / Cài đặt (dựng bằng js/app.js) -->
+        <nav class="main-nav" id="main-nav" aria-label="Menu chính"></nav>
 
-        <button
-          class="nav-toggle"
-          type="button"
-          aria-label="Mở menu"
-          aria-expanded="false"
-          aria-controls="mobile-nav"
-        >
+        <a class="btn btn-primary btn-sm header-cta" href="#review" data-nav="review">Học ngay</a>
+
+        <button class="nav-toggle" type="button" aria-label="Mở menu" aria-expanded="false" aria-controls="mobile-nav">
           <span></span><span></span><span></span>
         </button>
       </div>
-      <nav class="mobile-nav" id="mobile-nav" aria-label="Menu di động" hidden>
-        <a href="#home" data-nav="home">Trang chủ</a>
-        <a href="#dictionary" data-nav="dictionary">Tra từ</a>
-        <a href="#review" data-nav="review">Ôn tập hôm nay</a>
-        <a href="#vocabulary" data-nav="vocabulary">Kho từ vựng</a>
-        <a href="#calendar" data-nav="calendar">Lịch ôn tập</a>
-        <a href="#settings" data-nav="settings">Cài đặt</a>
-      </nav>
+
     </header>
 
     <main id="main" class="container app-main" tabindex="-1">
-      <!-- Màn hình khởi động / lỗi cấu hình -->
+      <!-- Màn hình khởi động / lỗi cấu hình / nhập mã truy cập -->
       <section id="boot-screen" class="boot-screen" aria-live="polite">
         <div class="boot-card card">
           <div class="boot-spinner" aria-hidden="true"></div>
           <h1>Đang kết nối dữ liệu…</h1>
-          <p class="muted" id="boot-message">Khởi tạo phiên học ẩn danh.</p>
+          <p class="muted" id="boot-message">Đang tải kho từ vựng.</p>
           <div id="boot-error" class="boot-error" hidden></div>
         </div>
       </section>
@@ -115,16 +68,8 @@
             <h1>Học tiếng Trung mỗi ngày một chút</h1>
             <p class="muted" id="hero-subtitle">Đang tải dữ liệu…</p>
             <div class="hero-actions">
-              <button
-                class="btn btn-primary btn-lg"
-                id="start-today"
-                type="button"
-              >
-                BẮT ĐẦU HỌC HÔM NAY
-              </button>
-              <a class="btn btn-ghost btn-lg" href="#dictionary"
-                >Tra nhanh một từ</a
-              >
+              <button class="btn btn-primary btn-lg" id="start-today" type="button">BẮT ĐẦU HỌC HÔM NAY</button>
+              <a class="btn btn-ghost btn-lg" href="#dictionary">Tra nhanh một từ</a>
             </div>
           </div>
           <div class="hero-progress">
@@ -158,9 +103,7 @@
       <section class="page" id="page-dictionary" data-page="dictionary" hidden>
         <div class="page-head">
           <h1>Tra từ điển</h1>
-          <p class="muted">
-            Tìm bằng chữ Hán, pinyin (không cần dấu) hoặc nghĩa tiếng Việt.
-          </p>
+          <p class="muted">Tìm bằng chữ Hán, pinyin (không cần dấu) hoặc nghĩa tiếng Việt.</p>
         </div>
 
         <form class="search-bar card" id="search-form" role="search">
@@ -180,9 +123,7 @@
         <div class="chip-row" id="quick-filters" aria-label="Lọc nhanh"></div>
 
         <div id="search-results" class="search-results" aria-live="polite">
-          <p class="muted empty-hint" id="search-hint">
-            Nhập từ khóa để bắt đầu tra từ.
-          </p>
+          <p class="muted empty-hint" id="search-hint">Nhập từ khóa để bắt đầu tra từ.</p>
         </div>
       </section>
 
@@ -193,11 +134,8 @@
             <h1>Ôn tập hôm nay</h1>
             <p class="muted" id="review-subtitle">Đang tải…</p>
           </div>
-          <button class="btn btn-ghost" id="review-reload" type="button">
-            Tải lại buổi học
-          </button>
+          <button class="btn btn-ghost" id="review-reload" type="button">Tải lại buổi học</button>
         </div>
-
         <div id="review-body"></div>
       </section>
 
@@ -205,9 +143,7 @@
       <section class="page" id="page-vocabulary" data-page="vocabulary" hidden>
         <div class="page-head">
           <h1>Kho từ vựng</h1>
-          <p class="muted">
-            Quản lý danh sách từ, nhập từ CSV, thêm từ thủ công.
-          </p>
+          <p class="muted">Quản lý danh sách từ, nhập từ CSV, thêm từ thủ công.</p>
         </div>
 
         <div class="toolbar card">
@@ -240,22 +176,13 @@
             </label>
             <label class="field-inline grow">
               <span>Tìm trong kho</span>
-              <input
-                id="vocab-search"
-                class="input"
-                type="search"
-                placeholder="Lọc theo chữ, pinyin, nghĩa…"
-              />
+              <input id="vocab-search" class="input" type="search" placeholder="Lọc theo chữ, pinyin, nghĩa…" />
             </label>
           </div>
-          <div class="button-row">
-            <button class="btn btn-primary" id="vocab-add" type="button">
-              + Thêm từ
-            </button>
+          <div class="button-row wrap">
+            <button class="btn btn-primary" id="vocab-add" type="button">+ Thêm từ</button>
             <a class="btn btn-outline" href="#import">Nhập CSV</a>
-            <button class="btn btn-ghost" id="vocab-export" type="button">
-              Xuất CSV
-            </button>
+            <button class="btn btn-ghost" id="vocab-export" type="button">Xuất CSV</button>
           </div>
         </div>
 
@@ -270,18 +197,11 @@
         <div class="page-head">
           <h1>Nhập từ vựng từ CSV</h1>
           <p class="muted">
-            9 trường bắt buộc:
-            <code
-              >word,pinyin,pos,meaning,hsk,topic,example,example_pinyin,example_meaning</code
-            >
+            9 trường bắt buộc: <code>word,pinyin,pos,meaning,hsk,topic,example,example_pinyin,example_meaning</code>
           </p>
         </div>
 
-        <div
-          class="import-steps"
-          id="import-steps"
-          aria-label="Các bước nhập CSV"
-        >
+        <div class="import-steps" id="import-steps" aria-label="Các bước nhập CSV">
           <span class="step is-active" data-step="1">1. Chọn file</span>
           <span class="step" data-step="2">2. Kiểm tra</span>
           <span class="step" data-step="3">3. Xử lý trùng</span>
@@ -295,47 +215,17 @@
       <section class="page" id="page-calendar" data-page="calendar" hidden>
         <div class="page-head">
           <h1>Lịch ôn tập</h1>
-          <p class="muted">
-            Lịch được tính động từ trạng thái ghi nhớ và ngày hiện tại.
-          </p>
+          <p class="muted">Lịch được tính động từ trạng thái ghi nhớ và ngày hiện tại.</p>
         </div>
 
         <div class="card calendar-card">
           <div class="calendar-head">
-            <button
-              class="btn btn-ghost"
-              id="cal-prev"
-              type="button"
-              aria-label="Tháng trước"
-            >
-              ‹
-            </button>
+            <button class="btn btn-ghost" id="cal-prev" type="button" aria-label="Tháng trước">‹</button>
             <h2 id="cal-title">Tháng</h2>
-            <button
-              class="btn btn-ghost"
-              id="cal-next"
-              type="button"
-              aria-label="Tháng sau"
-            >
-              ›
-            </button>
+            <button class="btn btn-ghost" id="cal-next" type="button" aria-label="Tháng sau">›</button>
             <div class="segmented" role="tablist" aria-label="Chế độ xem">
-              <button
-                class="segmented-btn is-active"
-                data-view="month"
-                type="button"
-                role="tab"
-              >
-                Tháng
-              </button>
-              <button
-                class="segmented-btn"
-                data-view="week"
-                type="button"
-                role="tab"
-              >
-                Tuần
-              </button>
+              <button class="segmented-btn is-active" data-view="month" type="button" role="tab">Tháng</button>
+              <button class="segmented-btn" data-view="week" type="button" role="tab">Tuần</button>
             </div>
           </div>
           <div class="calendar-legend">
@@ -353,7 +243,7 @@
       <section class="page" id="page-settings" data-page="settings" hidden>
         <div class="page-head">
           <h1>Cài đặt</h1>
-          <p class="muted">Cấu hình buổi học, sao lưu và khôi phục dữ liệu.</p>
+          <p class="muted">Buổi học, mã truy cập, sao lưu và khôi phục dữ liệu.</p>
         </div>
 
         <div class="grid-2">
@@ -362,46 +252,24 @@
             <form id="settings-form" class="stack">
               <label class="field">
                 <span>Từ mới mỗi ngày</span>
-                <input
-                  class="input"
-                  type="number"
-                  id="set-new"
-                  min="0"
-                  max="500"
-                  step="1"
-                  required
-                />
+                <input class="input" type="number" id="set-new" min="0" max="500" step="1" required />
               </label>
               <label class="field">
                 <span>Tổng số từ tối đa mỗi buổi</span>
-                <input
-                  class="input"
-                  type="number"
-                  id="set-max"
-                  min="1"
-                  max="2000"
-                  step="1"
-                  required
-                />
+                <input class="input" type="number" id="set-max" min="1" max="2000" step="1" required />
               </label>
               <label class="field">
                 <span>Giờ học ưa thích (tuỳ chọn)</span>
                 <input class="input" type="time" id="set-time" />
               </label>
               <p class="muted small" id="settings-meta"></p>
-              <button class="btn btn-primary" type="submit" id="settings-save">
-                Lưu cài đặt
-              </button>
+              <button class="btn btn-primary" type="submit" id="settings-save">Lưu cài đặt</button>
             </form>
           </div>
 
           <div class="card">
-            <h2>Phiên học &amp; dữ liệu</h2>
+            <h2>Kho dữ liệu</h2>
             <dl class="info-list">
-              <div>
-                <dt>Mã người dùng ẩn danh</dt>
-                <dd id="settings-user-id" class="mono"></dd>
-              </div>
               <div>
                 <dt>Múi giờ trình duyệt</dt>
                 <dd id="settings-timezone"></dd>
@@ -416,48 +284,35 @@
               </div>
             </dl>
             <p class="muted small">
-              Website dùng đăng nhập ẩn danh: dữ liệu gắn với trình duyệt này.
-              Nếu xoá dữ liệu trình duyệt, hãy dùng bản sao lưu JSON bên dưới để
-              phục hồi.
+              Website chạy chế độ một người dùng: dữ liệu nằm trong một kho duy nhất trên Supabase,
+              không cần tài khoản.
             </p>
+            <form id="access-form" class="stack">
+              <label class="field">
+                <span>Mã truy cập (nếu đã bật trên Supabase)</span>
+                <input class="input" type="password" id="set-access-key" placeholder="Để trống nếu không dùng" autocomplete="current-password" />
+              </label>
+              <button class="btn btn-outline" type="submit" id="access-save">Lưu mã truy cập</button>
+            </form>
           </div>
 
           <div class="card">
             <h2>Sao lưu dữ liệu</h2>
-            <p class="muted small">
-              Xuất toàn bộ từ vựng, lịch sử ôn tập, cài đặt và buổi học thành
-              một file JSON.
-            </p>
+            <p class="muted small">Xuất toàn bộ từ vựng, lịch sử ôn tập, cài đặt và buổi học thành một file JSON.</p>
             <div class="button-row wrap">
-              <button class="btn btn-outline" id="backup-json" type="button">
-                Xuất JSON đầy đủ
-              </button>
-              <button class="btn btn-outline" id="backup-csv" type="button">
-                Xuất từ vựng CSV
-              </button>
-              <button
-                class="btn btn-outline"
-                id="backup-progress"
-                type="button"
-              >
-                Xuất lịch sử học (JSON)
-              </button>
+              <button class="btn btn-outline" id="backup-json" type="button">Xuất JSON đầy đủ</button>
+              <button class="btn btn-outline" id="backup-csv" type="button">Xuất từ vựng CSV</button>
+              <button class="btn btn-outline" id="backup-progress" type="button">Xuất lịch sử học (JSON)</button>
             </div>
           </div>
 
           <div class="card">
             <h2>Khôi phục dữ liệu</h2>
             <p class="muted small">
-              Nhập file JSON đã xuất. Hệ thống kiểm tra cấu trúc, hiển thị xem
-              trước và chỉ ghi sau khi bạn xác nhận.
+              Nhập file JSON đã xuất. Hệ thống kiểm tra cấu trúc, hiển thị xem trước và chỉ ghi sau khi bạn xác nhận.
             </p>
             <label class="file-drop" id="restore-drop">
-              <input
-                type="file"
-                id="restore-file"
-                accept="application/json,.json"
-                hidden
-              />
+              <input type="file" id="restore-file" accept="application/json,.json" hidden />
               <strong>Chọn file JSON</strong>
               <span class="muted small">hoặc kéo thả file vào đây</span>
             </label>
@@ -466,13 +321,8 @@
 
           <div class="card danger-zone">
             <h2>Xoá dữ liệu</h2>
-            <p class="muted small">
-              Xoá toàn bộ từ vựng và lịch sử học của phiên hiện tại trên máy
-              chủ. Không thể hoàn tác.
-            </p>
-            <button class="btn btn-danger" id="danger-delete" type="button">
-              Xoá toàn bộ dữ liệu
-            </button>
+            <p class="muted small">Xoá toàn bộ từ vựng và lịch sử học trên máy chủ. Không thể hoàn tác.</p>
+            <button class="btn btn-danger" id="danger-delete" type="button">Xoá toàn bộ dữ liệu</button>
           </div>
         </div>
       </section>
@@ -480,12 +330,11 @@
 
     <footer class="app-footer">
       <div class="container">
-        <span
-          >Hán Ngữ · Từ điển &amp; ôn từ vựng · dữ liệu đồng bộ trên
-          Supabase</span
-        >
+        <span>Hán Ngữ · Từ điển &amp; ôn từ vựng · dữ liệu đồng bộ trên Supabase</span>
       </div>
     </footer>
+
+    <nav class="mobile-nav" id="mobile-nav" aria-label="Menu di động" hidden></nav>
 
     <div id="toast-root" aria-live="polite" aria-atomic="true"></div>
 
