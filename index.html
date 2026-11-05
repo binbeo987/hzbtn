@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Hán Ngữ – Từ điển & Ôn tập từ vựng tiếng Trung</title>
+  <meta name="description" content="Từ điển Trung – Việt, flashcard và lịch ôn tập từ vựng tiếng Trung tự động cho người Việt." />
+  <meta name="theme-color" content="#2563eb" />
+
+  <!--
+    Cấu hình thay thế khi chạy tĩnh không có Vercel (dev). Trên Vercel, giá trị
+    được inject qua /api/config + /js/env.js từ biến môi trường — không sửa ở đây.
+  -->
+  <meta name="supabase-url" content="" />
+  <meta name="supabase-anon-key" content="" />
+
+  <link rel="manifest" href="./assets/manifest.json" />
+  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="./assets/icon-192.png" />
+  <link rel="stylesheet" href="./css/style.css" />
+  <link rel="stylesheet" href="./css/responsive.css" />
+  <style>
+    /* Spinner hiển thị ngay cả khi CSS chính chưa tải xong */
+    .boot-spinner{width:40px;height:40px;border-radius:50%;border:3px solid #dbeafe;border-top-color:#2563eb;margin:0 auto 1rem;animation:hb-spin .8s linear infinite}
+    @keyframes hb-spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Bỏ qua điều hướng</a>
+
+  <header class="app-header">
+    <div class="container header-inner">
+      <a class="brand" href="#home" data-nav="home" aria-label="Hán Ngữ – Trang chủ">
+        <span class="brand-mark" aria-hidden="true">汉</span>
+        <span class="brand-text">
+          <strong>Hán Ngữ</strong>
+          <small>Từ điển &amp; ôn từ vựng</small>
+        </span>
+      </a>
+
+      <nav class="main-nav" aria-label="Menu chính">
+        <a href="#home" data-nav="home">Trang chủ</a>
+        <a href="#dictionary" data-nav="dictionary">Tra từ</a>
+        <a href="#review" data-nav="review">Ôn tập hôm nay</a>
+        <a href="#vocabulary" data-nav="vocabulary">Kho từ vựng</a>
+        <a href="#calendar" data-nav="calendar">Lịch ôn tập</a>
+        <a href="#settings" data-nav="settings">Cài đặt</a>
+      </nav>
+
+      <button class="nav-toggle" type="button" aria-label="Mở menu" aria-expanded="false" aria-controls="mobile-nav">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+    <nav class="mobile-nav" id="mobile-nav" aria-label="Menu di động" hidden>
+      <a href="#home" data-nav="home">Trang chủ</a>
+      <a href="#dictionary" data-nav="dictionary">Tra từ</a>
+      <a href="#review" data-nav="review">Ôn tập hôm nay</a>
+      <a href="#vocabulary" data-nav="vocabulary">Kho từ vựng</a>
+      <a href="#calendar" data-nav="calendar">Lịch ôn tập</a>
+      <a href="#settings" data-nav="settings">Cài đặt</a>
+    </nav>
+  </header>
+
+  <main id="main" class="container app-main" tabindex="-1">
+    <!-- Màn hình khởi động / lỗi cấu hình -->
+    <section id="boot-screen" class="boot-screen" aria-live="polite">
+      <div class="boot-card card">
+        <div class="boot-spinner" aria-hidden="true"></div>
+        <h1>Đang kết nối dữ liệu…</h1>
+        <p class="muted" id="boot-message">Khởi tạo phiên học ẩn danh.</p>
+        <div id="boot-error" class="boot-error" hidden></div>
+      </div>
+    </section>
+
+    <!-- TRANG CHỦ -->
+    <section class="page" id="page-home" data-page="home" hidden>
+      <div class="hero card">
+        <div class="hero-text">
+          <p class="eyebrow">Hôm nay</p>
+          <h1>Học tiếng Trung mỗi ngày một chút</h1>
+          <p class="muted" id="hero-subtitle">Đang tải dữ liệu…</p>
+          <div class="hero-actions">
+            <button class="btn btn-primary btn-lg" id="start-today" type="button">BẮT ĐẦU HỌC HÔM NAY</button>
+            <a class="btn btn-ghost btn-lg" href="#dictionary">Tra nhanh một từ</a>
+          </div>
+        </div>
+        <div class="hero-progress">
+          <span class="hero-progress-value" id="hero-progress-value">0%</span>
+          <span class="muted small">Tiến độ hôm nay</span>
+          <div id="hero-progress-bar"></div>
+        </div>
+      </div>
+
+      <div class="stat-grid" id="home-stats" aria-label="Thống kê"></div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head">
+            <h2>Buổi học hôm nay</h2>
+            <a href="#review" class="link-more">Xem chi tiết</a>
+          </div>
+          <ul class="summary-list" id="home-session-summary"></ul>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h2>Lịch 7 ngày tới</h2>
+            <a href="#calendar" class="link-more">Mở lịch</a>
+          </div>
+          <div class="week-strip" id="home-week"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TRA TỪ -->
+    <section class="page" id="page-dictionary" data-page="dictionary" hidden>
+      <div class="page-head">
+        <h1>Tra từ điển</h1>
+        <p class="muted">Tìm bằng chữ Hán, pinyin (không cần dấu) hoặc nghĩa tiếng Việt.</p>
+      </div>
+
+      <form class="search-bar card" id="search-form" role="search">
+        <input
+          id="search-input"
+          class="search-input"
+          type="search"
+          placeholder="学习, xuexi, học tập…"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          aria-label="Từ khóa tra từ"
+        />
+        <button class="btn btn-primary" type="submit">Tra từ</button>
+      </form>
+
+      <div class="chip-row" id="quick-filters" aria-label="Lọc nhanh"></div>
+
+      <div id="search-results" class="search-results" aria-live="polite">
+        <p class="muted empty-hint" id="search-hint">Nhập từ khóa để bắt đầu tra từ.</p>
+      </div>
+    </section>
+
+    <!-- ÔN TẬP HÔM NAY / FLASHCARD -->
+    <section class="page" id="page-review" data-page="review" hidden>
+      <div class="page-head review-head">
+        <div>
+          <h1>Ôn tập hôm nay</h1>
+          <p class="muted" id="review-subtitle">Đang tải…</p>
+        </div>
+        <button class="btn btn-ghost" id="review-reload" type="button">Tải lại buổi học</button>
+      </div>
+
+      <div id="review-body"></div>
+    </section>
+
+    <!-- KHO TỪ VỰNG -->
+    <section class="page" id="page-vocabulary" data-page="vocabulary" hidden>
+      <div class="page-head">
+        <h1>Kho từ vựng</h1>
+        <p class="muted">Quản lý danh sách từ, nhập từ CSV, thêm từ thủ công.</p>
+      </div>
+
+      <div class="toolbar card">
+        <div class="filter-row">
+          <label class="field-inline">
+            <span>HSK</span>
+            <select id="vocab-hsk" class="input">
+              <option value="">Tất cả</option>
+              <option value="HSK 1">HSK 1</option>
+              <option value="HSK 2">HSK 2</option>
+              <option value="HSK 3">HSK 3</option>
+              <option value="HSK 4">HSK 4</option>
+              <option value="HSK 5">HSK 5</option>
+              <option value="HSK 6">HSK 6</option>
+            </select>
+          </label>
+          <label class="field-inline">
+            <span>Chủ đề</span>
+            <select id="vocab-topic" class="input">
+              <option value="">Tất cả</option>
+            </select>
+          </label>
+          <label class="field-inline">
+            <span>Sắp xếp</span>
+            <select id="vocab-sort" class="input">
+              <option value="newest">Mới thêm</option>
+              <option value="oldest">Cũ nhất</option>
+              <option value="word">Theo chữ Hán</option>
+            </select>
+          </label>
+          <label class="field-inline grow">
+            <span>Tìm trong kho</span>
+            <input id="vocab-search" class="input" type="search" placeholder="Lọc theo chữ, pinyin, nghĩa…" />
+          </label>
+        </div>
+        <div class="button-row">
+          <button class="btn btn-primary" id="vocab-add" type="button">+ Thêm từ</button>
+          <a class="btn btn-outline" href="#import">Nhập CSV</a>
+          <button class="btn btn-ghost" id="vocab-export" type="button">Xuất CSV</button>
+        </div>
+      </div>
+
+      <div class="table-wrap card" id="vocab-table-wrap">
+        <p class="muted">Đang tải…</p>
+      </div>
+      <div class="pagination" id="vocab-pagination"></div>
+    </section>
+
+    <!-- IMPORT CSV -->
+    <section class="page" id="page-import" data-page="import" hidden>
+      <div class="page-head">
+        <h1>Nhập từ vựng từ CSV</h1>
+        <p class="muted">
+          9 trường bắt buộc: <code>word,pinyin,pos,meaning,hsk,topic,example,example_pinyin,example_meaning</code>
+        </p>
+      </div>
+
+      <div class="import-steps" id="import-steps" aria-label="Các bước nhập CSV">
+        <span class="step is-active" data-step="1">1. Chọn file</span>
+        <span class="step" data-step="2">2. Kiểm tra</span>
+        <span class="step" data-step="3">3. Xử lý trùng</span>
+        <span class="step" data-step="4">4. Kết quả</span>
+      </div>
+
+      <div class="card" id="import-panel"></div>
+    </section>
+
+    <!-- LỊCH ÔN TẬP -->
+    <section class="page" id="page-calendar" data-page="calendar" hidden>
+      <div class="page-head">
+        <h1>Lịch ôn tập</h1>
+        <p class="muted">Lịch được tính động từ trạng thái ghi nhớ và ngày hiện tại.</p>
+      </div>
+
+      <div class="card calendar-card">
+        <div class="calendar-head">
+          <button class="btn btn-ghost" id="cal-prev" type="button" aria-label="Tháng trước">‹</button>
+          <h2 id="cal-title">Tháng</h2>
+          <button class="btn btn-ghost" id="cal-next" type="button" aria-label="Tháng sau">›</button>
+          <div class="segmented" role="tablist" aria-label="Chế độ xem">
+            <button class="segmented-btn is-active" data-view="month" type="button" role="tab">Tháng</button>
+            <button class="segmented-btn" data-view="week" type="button" role="tab">Tuần</button>
+          </div>
+        </div>
+        <div class="calendar-legend">
+          <span><i class="dot dot-completed"></i>Hoàn thành</span>
+          <span><i class="dot dot-needs"></i>Có từ cần ôn</span>
+          <span><i class="dot dot-backlog"></i>Từ tồn đọng</span>
+          <span><i class="dot dot-future"></i>Ngày chưa đến</span>
+        </div>
+        <div id="calendar-grid" class="calendar-grid"></div>
+        <div id="calendar-day-detail" class="calendar-detail"></div>
+      </div>
+    </section>
+
+    <!-- CÀI ĐẶT -->
+    <section class="page" id="page-settings" data-page="settings" hidden>
+      <div class="page-head">
+        <h1>Cài đặt</h1>
+        <p class="muted">Cấu hình buổi học, sao lưu và khôi phục dữ liệu.</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h2>Lịch học hằng ngày</h2>
+          <form id="settings-form" class="stack">
+            <label class="field">
+              <span>Từ mới mỗi ngày</span>
+              <input class="input" type="number" id="set-new" min="0" max="500" step="1" required />
+            </label>
+            <label class="field">
+              <span>Tổng số từ tối đa mỗi buổi</span>
+              <input class="input" type="number" id="set-max" min="1" max="2000" step="1" required />
+            </label>
+            <label class="field">
+              <span>Giờ học ưa thích (tuỳ chọn)</span>
+              <input class="input" type="time" id="set-time" />
+            </label>
+            <p class="muted small" id="settings-meta"></p>
+            <button class="btn btn-primary" type="submit" id="settings-save">Lưu cài đặt</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <h2>Phiên học &amp; dữ liệu</h2>
+          <dl class="info-list">
+            <div><dt>Mã người dùng ẩn danh</dt><dd id="settings-user-id" class="mono"></dd></div>
+            <div><dt>Múi giờ trình duyệt</dt><dd id="settings-timezone"></dd></div>
+            <div><dt>Tổng số từ vựng</dt><dd id="settings-vocab-count"></dd></div>
+            <div><dt>Phiên bản</dt><dd id="settings-version"></dd></div>
+          </dl>
+          <p class="muted small">
+            Website dùng đăng nhập ẩn danh: dữ liệu gắn với trình duyệt này. Nếu xoá dữ liệu trình duyệt,
+            hãy dùng bản sao lưu JSON bên dưới để phục hồi.
+          </p>
+        </div>
+
+        <div class="card">
+          <h2>Sao lưu dữ liệu</h2>
+          <p class="muted small">Xuất toàn bộ từ vựng, lịch sử ôn tập, cài đặt và buổi học thành một file JSON.</p>
+          <div class="button-row wrap">
+            <button class="btn btn-outline" id="backup-json" type="button">Xuất JSON đầy đủ</button>
+            <button class="btn btn-outline" id="backup-csv" type="button">Xuất từ vựng CSV</button>
+            <button class="btn btn-outline" id="backup-progress" type="button">Xuất lịch sử học (JSON)</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Khôi phục dữ liệu</h2>
+          <p class="muted small">
+            Nhập file JSON đã xuất. Hệ thống kiểm tra cấu trúc, hiển thị xem trước và chỉ ghi
+            sau khi bạn xác nhận.
+          </p>
+          <label class="file-drop" id="restore-drop">
+            <input type="file" id="restore-file" accept="application/json,.json" hidden />
+            <strong>Chọn file JSON</strong>
+            <span class="muted small">hoặc kéo thả file vào đây</span>
+          </label>
+          <div id="restore-preview"></div>
+        </div>
+
+        <div class="card danger-zone">
+          <h2>Xoá dữ liệu</h2>
+          <p class="muted small">Xoá toàn bộ từ vựng và lịch sử học của phiên hiện tại trên máy chủ. Không thể hoàn tác.</p>
+          <button class="btn btn-danger" id="danger-delete" type="button">Xoá toàn bộ dữ liệu</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <div class="container">
+      <span>Hán Ngữ · Từ điển &amp; ôn từ vựng · dữ liệu đồng bộ trên Supabase</span>
+    </div>
+  </footer>
+
+  <div id="toast-root" aria-live="polite" aria-atomic="true"></div>
+
+  <noscript>
+    <div class="container"><p>Website cần JavaScript để hoạt động.</p></div>
+  </noscript>
+
+  <script src="./js/vendor/supabase.js"></script>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

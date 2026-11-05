@@ -1,0 +1,17 @@
+{
+  "name": "Hán Ngữ – Từ điển & Ôn từ vựng",
+  "short_name": "Hán Ngữ",
+  "description": "Từ điển Trung – Việt, flashcard và lịch ôn tập từ vựng tự động.",
+  "lang": "vi",
+  "start_url": "./index.html#home",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

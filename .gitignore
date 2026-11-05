@@ -1,0 +1,12 @@
+# Sao lưu / bí mật
+.env
+.env.local
+.env.*.local
+js/env.js
+node_modules/
+.vercel
+.vscode
+*.log
+.DS_Store
+Thumbs.db
+tests/tmp/

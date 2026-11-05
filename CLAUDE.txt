@@ -1,0 +1,430 @@
+Tôi muốn xây dựng một website web app hiện đại có tên “Từ điển & Học tiếng Trung”, dành cho người Việt Nam học tiếng Trung từ cơ bản đến nâng cao.
+Mục tiêu của website là kết hợp:
+• Từ điển tiếng Trung – Việt
+• Học từ vựng
+• Flashcard
+• Luyện nghe
+• Theo dõi tiến bộ cá nhân
+I. GIAO DIỆN
+Thiết kế giao diện hiện đại, thân thiện, tối ưu cho máy tính và điện thoại.
+Phong cách:
+• Clean UI
+• Card-based design
+• Bo góc mềm
+• Màu chủ đạo #F5DEB3 và trắng, chữ đen.
+• Font chữ hỗ trợ tốt tiếng Việt, tiếng Trung giản thể và Pinyin.
+• Có Light Mode và Dark Mode.
+• Responsive hoàn toàn.
+Thanh menu chính (Loại Dropdown):
+🏠 Trang chủ
+🔎 Tra từ
+📚 Từ vựng
+🎴 Flashcard
+🎧 Luyện nghe
+🎮 Luyện tập
+📊 Tiến bộ
+⚙️ Cài đặt
+
+---
+
+II. TRANG CHỦ
+Trang chủ hiển thị:
+• Lời chào người học.
+• Cấp độ hiện tại: HSK 1 / HSK 2 / HSK 3 / HSK 4 / HSK 5
+• Số từ đã học.
+• Số từ cần ôn hôm nay.
+• Chuỗi ngày học liên tiếp.
+• Điểm kinh nghiệm XP.
+• Cấp độ người học.
+• Tiến độ học tập.
+Có nút lớn:
+🔎 Tra từ tiếng Trung
+Ô tìm kiếm cho phép nhập:
+• Chữ Hán
+• Pinyin
+• Nghĩa tiếng Việt
+• Từ khóa tiếng Anh nếu có
+Ví dụ:
+“学习”
+Kết quả:
+学习
+xuéxí
+Học, học tập
+
+---
+
+III. TỪ ĐIỂN
+Khi tra một từ, hiển thị đầy đủ:
+
+1. Từ tiếng Trung
+   学习
+2. Pinyin
+   xuéxí
+   Có thanh điệu rõ ràng.
+3. Phát âm
+   Nút:
+   🔊 Nghe phát âm
+   Có thể nghe:
+   • Giọng nam
+   • Giọng nữ
+   • Phát âm chậm
+   • Phát âm bình thường
+4. Nghĩa tiếng Việt
+   学习:
+   • học
+   • học tập
+   • nghiên cứu
+5. Từ loại
+   Ví dụ:
+   • Động từ
+6. Cấp độ HSK
+   HSK 1
+7. Cấu tạo chữ
+   Hiển thị từng chữ:
+   学 + 习
+   Có thể mở rộng:
+   • Bộ thủ
+   • Số nét
+   • Thứ tự viết
+   • Âm Hán Việt
+8. Ví dụ
+   我每天学习中文。
+   Wǒ měitiān xuéxí Zhōngwén.
+   Tôi học tiếng Trung mỗi ngày.
+   Cho phép nghe cả câu.
+9. Từ liên quan
+   学生
+   学习
+   学校
+   学习中文
+10. Từ đồng nghĩa / trái nghĩa nếu có.
+11. Nút thao tác
+    ⭐ Thêm vào từ yêu thích
+    📚 Thêm vào bộ từ vựng
+    🎴 Tạo flashcard
+    ✍️ Luyện viết
+    🗣️ Luyện phát âm
+
+---
+
+IV. TÌM KIẾM THÔNG MINH
+Cho phép người dùng tìm bằng:
+• 中文
+• Pinyin
+• Tiếng Việt
+Ví dụ:
+Nhập:
+“trường học”
+Kết quả:
+学校
+xuéxiào
+Trường học
+Nhập:
+“xuexiao”
+→ tìm được 学校.
+Nhập:
+“học sinh”
+→ tìm được 学生.
+Có chức năng sửa lỗi chính tả và gợi ý từ gần giống.
+
+---
+
+V. HỌC TỪ VỰNG
+Tạo hệ thống học từ vựng theo:
+• HSK 1
+• HSK 2
+• HSK 3
+• HSK 4
+• HSK 5
+• HSK 6
+• Chủ đề
+Các chủ đề:
+👨👩👧 Gia đình
+🏫 Trường học
+🍜 Ăn uống
+🏠 Nhà cửa
+💼 Công việc
+🛒 Mua sắm
+✈️ Du lịch
+❤️ Cảm xúc
+⏰ Thời gian
+🌦️ Thời tiết
+🏥 Sức khỏe
+💬 Giao tiếp hàng ngày
+Mỗi từ có:
+Chữ Hán → Pinyin → Nghĩa → Phát âm → Ví dụ.
+
+---
+
+VI. FLASHCARD
+Thiết kế flashcard tương tác.
+Mặt trước:
+学习
+Mặt sau:
+xuéxí
+Học, học tập
+Ví dụ:
+我喜欢学习中文。
+Có nút:
+❌ Chưa nhớ
+😐 Nhớ một phần
+✅ Đã nhớ
+🔥 Rất nhớ
+Hệ thống sử dụng các lựa chọn này để xác định thời điểm ôn lại từ.
+
+---
+
+VII. HỆ THỐNG SPACED REPETITION
+Xây dựng thuật toán ôn tập lặp lại ngắt quãng.
+Mỗi từ có trạng thái:
+• Mới
+• Đang học
+• Cần ôn
+• Đã nhớ
+• Thành thạo
+Tự động đưa từ cần ôn vào danh sách:
+“Hôm nay bạn cần ôn 17 từ.”
+Có thể sử dụng thuật toán tương tự Leitner hoặc SM-2.
+
+---
+
+VIII. LUYỆN TẬP
+Tạo nhiều dạng bài:
+Dạng 1 – Chọn nghĩa
+学习 nghĩa là gì?
+A. Làm việc
+B. Học tập
+C. Ăn uống
+D. Đi chơi
+Dạng 2 – Chọn chữ Hán
+“xuéxí” là:
+A. 学习
+B. 学校
+C. 学生
+D. 老师
+Dạng 3 – Nghe và chọn
+Phát âm một từ → người học chọn chữ đúng.
+Dạng 4 – Điền Pinyin
+学习 → **\_\_**
+Dạng 5 – Sắp xếp câu
+我 / 中文 / 学习 / 每天
+→ 我每天学习中文。
+Dạng 6 – Nghe câu và nhập lại.
+Dạng 7 – Dịch Việt → Trung.
+Dạng 8 – Dịch Trung → Việt.
+Dạng 9 – Nhận diện thanh điệu.
+Ví dụ:
+mā / má / mǎ / mà
+Dạng 10 – Luyện viết chữ Hán.
+Hiển thị thứ tự nét và cho người dùng viết trực tiếp trên màn hình.
+
+---
+
+IX. LUYỆN PHÁT ÂM
+Tạo chức năng sử dụng microphone.
+Người học nghe:
+你好
+Sau đó bấm:
+🎤 Bắt đầu nói
+Người dùng đọc:
+Nǐ hǎo.
+Hệ thống phân tích:
+• Độ chính xác từ
+• Pinyin
+• Thanh điệu
+• Từ đọc sai
+Hiển thị ví dụ:
+Phát âm: 86%
+Thanh điệu: 78%
+Độ chính xác: 91%
+Đề xuất:
+“Bạn cần chú ý thanh 3 trong từ 你.”
+
+---
+
+XII. GAMIFICATION
+Tạo hệ thống:
+XP – điểm kinh nghiệm
+🔥 Streak – chuỗi ngày học
+🏆 Thành tích
+🎖️ Huy hiệu
+⭐ Cấp độ
+Ví dụ:
+Cấp 1: Người mới
+Cấp 2: Làm quen Hán tự
+Cấp 3: Người học chăm chỉ
+Cấp 4: Giao tiếp cơ bản
+Cấp 5: Hán ngữ tự tin
+Mỗi hoạt động nhận XP:
+Tra từ: +1 XP
+Học từ mới: +5 XP
+Hoàn thành bài tập: +10 XP
+Hoàn thành bài học: +20 XP
+Duy trì streak: +10 XP
+
+---
+
+XIII. BẢNG THÀNH TÍCH
+Hiển thị:
+🔥 Streak hiện tại
+🏆 Streak cao nhất
+📚 Tổng số từ đã học
+🎯 Tỷ lệ trả lời đúng
+⏱️ Thời gian học
+📈 Tiến bộ theo tuần/tháng
+Có biểu đồ:
+• Từ mới
+• Từ đã nhớ
+• Tỷ lệ đúng
+• Thời gian học
+
+---
+
+XIV. CÁ NHÂN HÓA
+Hệ thống phải phân tích những từ người học thường sai.
+Ví dụ:
+“Bạn thường nhầm:
+的 / 得 / 地”
+→ tạo riêng một bài luyện tập 10 câu.
+Hoặc:
+“Bạn đang yếu về thanh 3.”
+→ đề xuất bài luyện thanh 3.
+Mục tiêu là không bắt người học học lại những nội dung họ đã thành thạo quá nhiều lần.
+
+---
+
+XV. CHẾ ĐỘ HỌC 10 PHÚT MỖI NGÀY
+Tạo một nút:
+🔥 “Học 10 phút”
+Hệ thống tự động tạo bài học gồm:
+2 phút ôn từ cũ
+3 phút học từ mới
+3 phút luyện nghe
+2 phút kiểm tra
+Cuối bài:
+🎉 Hoàn thành!
++50 XP
++1 ngày Streak
+
+---
+
+XVI. CÂU TRÍCH DẪN / ĐỘNG LỰC
+Mỗi ngày hiển thị một câu tiếng Trung đơn giản.
+Ví dụ:
+坚持就是胜利。
+Jiānchí jiù shì shènglì.
+Kiên trì chính là chiến thắng.
+Có nút 🔊 nghe phát âm.
+
+---
+
+XVII. QUẢN LÝ TÀI KHOẢN
+Cho phép:
+• Đăng ký
+• Đăng nhập
+• Google Login nếu có backend
+• Lưu dữ liệu học tập
+• Đồng bộ giữa máy tính và điện thoại.
+Thông tin cá nhân:
+Tên
+Avatar
+Mục tiêu HSK
+Số phút học mỗi ngày
+Mục tiêu số từ
+
+---
+
+XVIII. CÔNG NGHỆ
+Nếu tạo prototype frontend:
+• HTML5
+• CSS3
+• JavaScript
+• LocalStorage
+• Web Speech API nếu trình duyệt hỗ trợ
+• Responsive Design
+Nếu xây dựng phiên bản thực tế:
+Frontend:
+• HTML5
+• CSS3
+Backend:
+• JavaScript
+Database:
+• Supabase
+Authentication:
+• Supabase Auth
+AI:
+• API mô hình ngôn ngữ
+Speech:
+• Text-to-Speech
+• Speech-to-Text
+Dictionary:
+• Thiết kế database từ vựng riêng.
+
+---
+
+XIX. DATABASE TỪ VỰNG
+Thiết kế dữ liệu cho mỗi từ:
+{
+status: status,
+nextReviewDate: nextReviewDate,
+vocabulary: "学习",
+pinyin: "xuéxí",
+partOfSpeech: "động từ",
+meaning: "học, học tập",
+example: 我每天学习中文。,
+examplePinyin: "Wǒ měitiān xuéxí Zhōngwén.",
+exampleMeaning: "Tôi học tiếng Trung mỗi ngày.",
+dataTable: “HSK1”,
+}
+
+---
+
+XX. TÍNH NĂNG QUẢN TRỊ
+Tạo Admin Dashboard để:
+• Thêm từ
+• Sửa từ
+• Xóa từ
+• Import từ vựng bằng CSV/Excel
+• Quản lý HSK
+• Quản lý chủ đề
+• Quản lý câu ví dụ
+• Quản lý bài học
+• Xem thống kê người dùng.
+Cho phép import dữ liệu dạng:
+CSV:
+word,pinyin,meaning,hsk,example,example_vi
+
+---
+
+XXI. YÊU CẦU UX QUAN TRỌNG
+Website phải ưu tiên tốc độ và sự đơn giản.
+Khi người dùng mở trang:
+Không hiển thị quá nhiều thông tin cùng lúc.
+Ô tìm kiếm phải là thành phần nổi bật nhất.
+Kết quả từ điển phải dễ đọc.
+Chữ Hán hiển thị lớn.
+Pinyin hiển thị ngay bên dưới.
+Nghĩa tiếng Việt rõ ràng.
+Nút phát âm dễ bấm.
+Trên điện thoại vẫn phải sử dụng thuận tiện.
+
+---
+
+XXII. KẾT QUẢ CẦN TẠO
+Hãy tạo một phiên bản prototype hoàn chỉnh có thể chạy trực tiếp trên trình duyệt.
+Bao gồm:
+
+1. Trang chủ
+2. Trang tra từ
+3. Trang từ vựng
+4. Flashcard
+5. Bài luyện tập
+6. Trang tiến bộ
+7. AI Tutor mockup
+8. Dark mode
+9. Responsive mobile
+10. LocalStorage để lưu dữ liệu người dùng.
+    Tạo dữ liệu mẫu ít nhất 100 từ tiếng Trung phổ biến để demo.
+    Code phải được tổ chức rõ ràng, dễ mở rộng.
+    Không tạo giao diện chỉ mang tính minh họa. Các nút chính phải có chức năng thực tế trong phạm vi prototype.
+    Nếu chưa có API AI hoặc database thì sử dụng dữ liệu mock và LocalStorage, nhưng kiến trúc code phải sẵn sàng để kết nối API/backend sau này.

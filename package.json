@@ -1,0 +1,17 @@
+{
+  "name": "han-ngu-dictionary",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tu dien Trung - Viet, flashcard va lich on tap tu vung (Supabase + Vercel)",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node scripts/serve.mjs",
+    "dev": "node scripts/build.mjs && node scripts/serve.mjs",
+    "test": "node --test tests/",
+    "seed": "node scripts/normalize-seed.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

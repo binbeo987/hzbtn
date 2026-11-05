@@ -1,0 +1,101 @@
+/* =============================================================================
+ * Hán Ngữ – responsive.css (desktop / tablet / mobile)
+ * ============================================================================= */
+
+@media (max-width: 1080px) {
+  .stat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .hero { gap: 1.25rem; }
+}
+
+@media (max-width: 960px) {
+  .main-nav { display: none; }
+  .nav-toggle { display: block; }
+
+  .grid-2 { grid-template-columns: minmax(0, 1fr); }
+  .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  .hero { flex-direction: column; align-items: stretch; }
+  .hero-progress { flex: none; flex-direction: row; align-items: center; justify-content: space-between; gap: 0.75rem; text-align: left; }
+  .hero-progress .progress { width: auto; flex: 1; }
+  .hero-progress-value { font-size: 1.5rem; }
+}
+
+@media (max-width: 720px) {
+  body { font-size: 15px; }
+
+  :root { --header-h: 58px; }
+
+  .app-main { padding-block: 1rem 2.5rem; }
+
+  .page-head h1 { font-size: 1.45rem; }
+
+  .search-bar { position: static; flex-wrap: nowrap; padding: 0.45rem; }
+  .search-bar .btn { padding-inline: 0.9rem; }
+
+  .stat { padding: 0.85rem 0.9rem; }
+  .stat-value { font-size: 1.5rem; }
+  .stat-label { font-size: 0.7rem; }
+
+  .hero-actions .btn { flex: 1 1 auto; }
+
+  .rating-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rating-btn { padding: 0.65rem 0.4rem; }
+
+  .flashcard-inner { height: min(66vh, 560px); min-height: 360px; }
+  .fc-word { font-size: clamp(3.4rem, 20vw, 5.5rem); }
+
+  .calendar-grid { gap: 0.25rem; }
+  .cal-cell { min-height: 62px; padding: 0.3rem; border-radius: 10px; }
+  .cal-counts { font-size: 0.64rem; }
+  .cal-daynum { width: 20px; height: 20px; font-size: 0.72rem; }
+  .calendar-head h2 { font-size: 1rem; }
+
+  .filter-row { gap: 0.5rem; }
+  .field-inline { flex: 1 1 calc(50% - 0.5rem); }
+
+  .modal-actions .btn { flex: 1; }
+
+  .week-strip { gap: 0.25rem; }
+  .week-day { font-size: 0.62rem; padding: 0.35rem 0.1rem; }
+  .week-day strong { font-size: 0.9rem; }
+
+  .data-table { min-width: 560px; }
+
+  .button-row.wrap .btn { flex: 1 1 auto; }
+}
+
+@media (max-width: 480px) {
+  .container { padding-inline: 0.85rem; }
+
+  .brand-text small { display: none; }
+
+  .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; }
+  .stat-value { font-size: 1.3rem; }
+
+  .entry-word { font-size: 2.6rem; }
+  .entry-pinyin { font-size: 1.05rem; }
+  .entry-actions .btn { flex: 1 1 100%; }
+
+  .import-steps { font-size: 0.72rem; }
+  .step { padding: 0.25rem 0.55rem; }
+
+  .cal-weekday { font-size: 0.6rem; }
+  .cal-cell { min-height: 54px; }
+  .cal-counts b { font-size: 0.68rem; }
+
+  .detail-list { grid-template-columns: minmax(0, 1fr); }
+
+  .hero-progress { flex-wrap: wrap; }
+
+  .rating-btn small { display: none; }
+  .rating-btn { font-size: 0.82rem; }
+}
+
+@media (min-width: 961px) {
+  .mobile-nav { display: none !important; }
+}
+
+@media print {
+  .app-header, .app-footer, .rating-grid, .flashcard-actions, #toast-root { display: none !important; }
+  .card { box-shadow: none; border-color: #cbd5e1; }
+}
