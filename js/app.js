@@ -93,10 +93,23 @@ async function navigate(page) {
     section.hidden = section.dataset.page !== page;
   });
   const boot = document.getElementById('boot-screen');
-  if (boot && state.ready) boot.hidden = true;
+  if (boot && state.ready) {
+    boot.hidden = true;
+    const err = document.getElementById('boot-error');
+    if (err) err.hidden = true;
+  }
 
   if (changed) window.scrollTo({ top: 0, behavior: 'auto' });
 
+  try {
+    await renderPage(page);
+  } catch (error) {
+    console.error(error);
+    toast(getErrorMessage(error), 'error', 5000);
+  }
+}
+
+async function renderPage(page) {
   switch (page) {
     case 'home':
       renderHome();
@@ -149,8 +162,6 @@ function setupRouting() {
       location.hash = '#import';
       return;
     }
-    if (current !== 'review') location.hash = '#review';
-    resetFinalizeFlag();
     startToday();
   });
 }
@@ -165,10 +176,22 @@ function setupGlobalEvents() {
   window.addEventListener('online', () => toast('Đã có kết nối lại.', 'success', 1800));
   window.addEventListener('offline', () => toast('Mất kết nối mạng — thao tác lưu sẽ thất bại.', 'error', 4000));
 
-  window.addEventListener('unhandledrejection', (event) => {
+  // Phiên ẩn danh hết hạn: không tự tạo phiên mới (sẽ làm "mất" dữ liệu cũ),
+  // chỉ thử khôi phục phiên hiện có và báo cho người dùng.
+  let recovering = false;
+  window.addEventListener('unhandledrejection', async (event) => {
     const message = getErrorMessage(event.reason);
-    if (/JWT|session|refresh/i.test(message)) {
-      ensureSession({ force: true }).catch(() => {});
+    if (!/JWT|session|refresh/i.test(message) || recovering) return;
+    recovering = true;
+    try {
+      await ensureSession();
+      await bootstrap();
+      await renderPage(current || pageFromHash());
+      toast('Đã làm mới phiên học.', 'info', 2500);
+    } catch {
+      toast('Phiên học đã hết hạn. Hãy tải lại trang; dữ liệu vẫn an toàn trên Supabase.', 'error', 6000);
+    } finally {
+      recovering = false;
     }
   });
 }

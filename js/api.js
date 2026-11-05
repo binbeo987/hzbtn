@@ -38,11 +38,14 @@ function stripEmpty(vocab) {
 /* VOCABULARY                                                                  */
 /* -------------------------------------------------------------------------- */
 
-export async function searchVocabulary(query, { limit = 30, offset = 0 } = {}) {
+/** Tìm theo Hán tự / pinyin (bỏ dấu) / nghĩa. */
+export async function searchVocabulary(query, { limit = 30, offset = 0, hsk = '', topic = '' } = {}) {
   const { data, error } = await client().rpc('search_vocabulary', {
     p_query: query,
     p_limit: limit,
     p_offset: offset,
+    p_hsk: hsk || null,
+    p_topic: topic || null,
   });
   if (error) throw error;
   return data || [];
@@ -54,7 +57,14 @@ export async function countVocabulary() {
   return count || 0;
 }
 
-export async function listVocabularyPage({ limit = 50, offset = 0, hsk = '', topic = '', sort = 'newest' } = {}) {
+/**
+ * Một trang kho từ vựng.
+ * Khi có `search`, dùng RPC search_vocabulary (tìm cả chữ Hán, pinyin không dấu, nghĩa)
+ * rồi lọc HSK/chủ đề trên kết quả — tránh tải toàn bộ kho về trình duyệt.
+ */
+export async function listVocabularyPage({ limit = 50, offset = 0, hsk = '', topic = '', sort = 'newest', search = '' } = {}) {
+  if (search) return searchPage({ limit, offset, hsk, topic, sort, search });
+
   let query = client().from('vocabulary').select('*', { count: 'exact' });
   if (hsk) query = query.eq('hsk', hsk);
   if (topic) query = query.eq('topic', topic);
@@ -71,6 +81,33 @@ export async function listVocabularyPage({ limit = 50, offset = 0, hsk = '', top
   const { data, error, count } = await query.range(offset, offset + limit - 1);
   if (error) throw error;
   return { rows: data || [], count: count || 0 };
+}
+
+async function searchPage({ limit, offset, hsk, topic, sort, search }) {
+  const pageSize = 200;
+  const started = Date.now();
+  const matches = [];
+  let raw = 0;
+
+  // HSK/chủ đề được lọc ở DB nên mỗi trang trả về đúng là một trang kết quả.
+  for (let from = 0; ; from += pageSize) {
+    if (from >= 1000 || Date.now() - started > 8000) break;
+    const rows = await searchVocabulary(search, { limit: pageSize, offset: from, hsk, topic });
+    raw += rows.length;
+    matches.push(...rows);
+    if (raw >= offset + limit + 1 || rows.length < pageSize) break;
+  }
+
+  let rows = matches;
+  if (sort === 'word') rows = [...rows].sort((a, b) => String(a.word).localeCompare(String(b.word), 'zh'));
+  else if (sort === 'oldest') rows = [...rows].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  else rows = [...rows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+  return {
+    rows: rows.slice(offset, offset + limit),
+    count: rows.length,
+    approximate: raw >= 2000,
+  };
 }
 
 export async function listAllVocabulary({ columns = '*', pageSize = 1000, onPage } = {}) {

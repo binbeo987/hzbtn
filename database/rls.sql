@@ -104,11 +104,14 @@ create policy "favorites_delete_own" on public.favorites
 -- Chạy ở phía DB để kết quả không phụ thuộc giới hạn 1000 dòng mặc định.
 -- =============================================================================
 drop function if exists public.search_vocabulary(text, integer, integer);
+drop function if exists public.search_vocabulary(text, integer, integer, text, text);
 drop function if exists public.search_vocabulary(public.vocabulary, text, integer, integer);
 create function public.search_vocabulary(
   p_query text,
   p_limit integer default 30,
-  p_offset integer default 0
+  p_offset integer default 0,
+  p_hsk text default null,
+  p_topic text default null
 )
 returns setof public.vocabulary
 language sql
@@ -127,6 +130,9 @@ as $$
          like '%' || lower(regexp_replace(btrim(p_query), '[^a-zA-Z0-9]', '', 'g')) || '%'
       or v.meaning ilike '%' || btrim(p_query) || '%'
     )
+    -- Lọc HSK / chủ đề ở phía DB để phân trang tìm kiếm luôn chính xác.
+    and (nullif(btrim(coalesce(p_hsk, '')), '') is null or v.hsk = btrim(p_hsk))
+    and (nullif(btrim(coalesce(p_topic, '')), '') is null or v.topic = btrim(p_topic))
   order by
     case when v.word = btrim(p_query) then 0
          when lower(regexp_replace(v.pinyin, '[^a-zA-Z0-9]', '', 'g')) =
@@ -140,7 +146,7 @@ as $$
     end,
     length(v.word),
     v.word
-  limit greatest(1, least(coalesce(p_limit, 30), 100))
+  limit greatest(1, least(coalesce(p_limit, 30), 200))
   offset greatest(0, coalesce(p_offset, 0));
 $$;
 
@@ -266,12 +272,12 @@ end;
 $$;
 
 grant execute on function public.ensure_learning_settings() to authenticated;
-grant execute on function public.search_vocabulary(text, integer, integer) to authenticated;
+grant execute on function public.search_vocabulary(text, integer, integer, text, text) to authenticated;
 grant execute on function public.record_review(uuid, text, timestamptz, timestamptz, text, numeric, integer, numeric, integer, integer, integer) to authenticated;
 grant execute on function public.mark_session(date, integer, integer, integer, integer, text, timestamptz, timestamptz) to authenticated;
 
 revoke all on function public.ensure_learning_settings() from anon;
-revoke all on function public.search_vocabulary(text, integer, integer) from anon;
+revoke all on function public.search_vocabulary(text, integer, integer, text, text) from anon;
 revoke all on function public.record_review(uuid, text, timestamptz, timestamptz, text, numeric, integer, numeric, integer, integer, integer) from anon;
 revoke all on function public.mark_session(date, integer, integer, integer, integer, text, timestamptz, timestamptz) from anon;
 

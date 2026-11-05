@@ -1,4 +1,4 @@
-﻿/* =============================================================================
+/* =============================================================================
  * session-cache.js - Lưu tạm tiến độ buổi Flashcard đang học (LocalStorage).
  * Đây KHÔNG phải nguồn dữ liệu chính: mỗi lần đánh giá đều đã lưu vào Supabase.
  * Cache chỉ giúp người dùng đóng tab giữa buổi và mở lại đúng vị trí.

@@ -8,7 +8,6 @@ import {
   updateVocabulary,
   deleteVocabulary,
   removeFavorite,
-  searchVocabulary,
 } from './api.js';
 import { state, addVocabularyLocal, updateVocabularyLocal, removeVocabularyLocal } from './store.js';
 import { toCsvText, CSV_HEADER } from './csv-parser.js';
@@ -79,65 +78,47 @@ export async function renderVocabulary() {
   await renderTable();
 }
 
-function matchesSearch(row, q) {
-  if (!q) return true;
-  const plain = (value) =>
-    String(value || '')
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
-  return (
-    (row.word || '').includes(q) ||
-    (row.pinyin || '').toLowerCase().includes(q) ||
-    plain(row.pinyin).includes(plain(q)) ||
-    (row.meaning || '').toLowerCase().includes(q)
-  );
-}
+let requestSeq = 0;
 
 async function renderTable() {
   const wrap = document.getElementById('vocab-table-wrap');
   const pager = document.getElementById('vocab-pagination');
   if (!wrap) return;
+  const seq = ++requestSeq;
   wrap.innerHTML = '<p class="muted" style="padding:1rem"><span class="spinner"></span> Đang tải…</p>';
 
   try {
-    if (filters.search) {
-      const rows = await searchVocabulary(filters.search, { limit: 100, offset: 0 });
-      const filtered = rows.filter(
-        (r) =>
-          (!filters.hsk || r.hsk === filters.hsk) &&
-          (!filters.topic || r.topic === filters.topic) &&
-          matchesSearch(r, filters.search),
-      );
-      total = filtered.length;
-      const progressMap = new Map(state.rows.map((r) => [r.id, r.progress]));
-      const pageRows = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-      renderRows(wrap, pageRows.map((r) => ({ ...r, progress: progressMap.get(r.id) || null })));
-    } else {
-      const { rows, count } = await listVocabularyPage({
-        limit: PAGE_SIZE,
-        offset: page * PAGE_SIZE,
-        hsk: filters.hsk,
-        topic: filters.topic,
-        sort: filters.sort,
-      });
-      total = count;
-      const progressMap = new Map(state.rows.map((r) => [r.id, r.progress]));
-      renderRows(wrap, rows.map((r) => ({ ...r, progress: progressMap.get(r.id) || null })));
-    }
+    const { rows, count, approximate } = await listVocabularyPage({
+      limit: PAGE_SIZE,
+      offset: page * PAGE_SIZE,
+      hsk: filters.hsk,
+      topic: filters.topic,
+      sort: filters.sort,
+      search: filters.search,
+    });
+    // Bỏ kết quả của lần gõ trước nếu người dùng đã gõ tiếp.
+    if (seq !== requestSeq) return;
+    total = count;
+    const progressMap = new Map(state.rows.map((r) => [r.id, r.progress]));
+    renderRows(wrap, rows.map((r) => ({ ...r, progress: progressMap.get(r.id) || null })), approximate);
     renderPager(pager);
   } catch (error) {
+    if (seq !== requestSeq) return;
     wrap.innerHTML = `<div class="boot-error" style="margin:1rem">${esc(getErrorMessage(error))}</div>`;
   }
 }
 
-function renderRows(wrap, rows) {
+function hasFilters() {
+  return Boolean(filters.search || filters.hsk || filters.topic);
+}
+
+function renderRows(wrap, rows, approximate = false) {
   wrap.innerHTML = '';
   if (!rows.length) {
     wrap.append(
       el('div', { class: 'empty-state' }, [
         el('h2', {}, 'Chưa có từ nào'),
-        el('p', { class: 'muted' }, 'Hãy nhập CSV hoặc thêm từ thủ công.'),
+        el('p', { class: 'muted' }, hasFilters() ? 'Không có từ nào khớp bộ lọc hiện tại.' : 'Hãy nhập CSV hoặc thêm từ thủ công.'),
         el('a', { class: 'btn btn-primary', href: '#import' }, 'Nhập CSV'),
       ]),
     );
@@ -198,6 +179,9 @@ function renderRows(wrap, rows) {
   }
   table.appendChild(tbody);
   wrap.appendChild(table);
+  if (approximate) {
+    wrap.appendChild(el('p', { class: 'muted small', style: { padding: '0 1rem 1rem' } }, 'Kết quả đang bị giới hạn — hãy nhập từ khóa cụ thể hơn.'));
+  }
 }
 
 async function deleteVocabularyFlow(row) {

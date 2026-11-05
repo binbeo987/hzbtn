@@ -13,7 +13,7 @@ import {
   getSavedQueueSnapshot,
 } from './store.js';
 import { recordReview, startLearning, queueForReview, markSession } from './api.js';
-import { scheduleReview, buildDailyQueue, localDayKey, formatNextReview } from './scheduler.js';
+import { scheduleReview, buildDailyQueue, localDayKey } from './scheduler.js';
 import { RATING_META } from './config.js';
 import {
   el,
@@ -24,10 +24,12 @@ import {
   labelTopic,
   getErrorMessage,
   progressBar,
+  confirmDialog,
 } from './ui.js';
 
-let current = null; // { items, index, ratings, startedAt, dayKey, revealed, saving }
+let current = null; // { items, index, ratings, startedAt, dayKey, counts, revealed, saving }
 let mounted = false;
+let saveError = null; // lỗi lưu gần nhất, hiển thị trong buổi học
 
 const body = () => document.getElementById('review-body');
 const subtitle = () => document.getElementById('review-subtitle');
@@ -36,11 +38,10 @@ const subtitle = () => document.getElementById('review-subtitle');
 /* BUILD QUEUE                                                                 */
 /* -------------------------------------------------------------------------- */
 
-/** Tính buổi học mới từ dữ liệu đã tải; nếu còn snapshot hôm nay thì khôi phục. */
+/** Tính buổi học mới từ dữ liệu đã tải. */
 export function planToday() {
   const tz = state.settings?.timezone || undefined;
-  const plan = buildDailyQueue(state.rows, state.settings || {}, new Date(), tz);
-  return plan;
+  return buildDailyQueue(state.rows, state.settings || {}, new Date(), tz);
 }
 
 export function restoreOrBuildQueue() {
@@ -51,13 +52,14 @@ export function restoreOrBuildQueue() {
   if (snapshot && snapshot.dayKey === today && snapshot.items?.length) {
     const byId = new Map(state.rows.map((r) => [r.id, r]));
     const items = snapshot.items.map((id) => byId.get(id)).filter(Boolean);
-    const completedIds = new Set(Object.keys(snapshot.ratings || {}));
+    const ratings = snapshot.ratings || {};
+    const completedIds = new Set(Object.keys(ratings));
     const remaining = items.filter((i) => !completedIds.has(i.id));
     if (remaining.length && items.length) {
       current = {
         items,
         index: 0,
-        ratings: snapshot.ratings || {},
+        ratings,
         startedAt: snapshot.startedAt || new Date().toISOString(),
         dayKey: today,
         counts: snapshot.counts || {},
@@ -88,6 +90,7 @@ export function rebuildQueue() {
     resumed: false,
     deferredNew: plan.deferredNew,
   };
+  saveError = null;
   persist();
   return current;
 }
@@ -117,9 +120,13 @@ export function mountReview() {
   const reload = document.getElementById('review-reload');
   if (reload && !reload.dataset.bound) {
     reload.dataset.bound = '1';
-    reload.addEventListener('click', () => {
+    reload.addEventListener('click', async () => {
       if (current && !isComplete()) {
-        const ok = window.confirm('Tải lại buổi học? Các đánh giá đã lưu vẫn được giữ, buổi học sẽ được tính lại.');
+        const ok = await confirmDialog({
+          title: 'Tải lại buổi học',
+          message: 'Các đánh giá đã lưu vào Supabase vẫn được giữ nguyên. Buổi học sẽ được tính lại từ dữ liệu mới nhất.',
+          okText: 'Tải lại',
+        });
         if (!ok) return;
       }
       invalidateQueue();
@@ -152,6 +159,23 @@ function statsOf() {
   };
 }
 
+/** Tạo hàng nút đánh giá (dùng chung cho lần render đầu và sau khi mở đáp án). */
+function ratingGrid() {
+  const grid = el('div', { class: 'rating-grid', id: 'rating-grid' });
+  for (const [rating, meta] of Object.entries(RATING_META)) {
+    grid.appendChild(
+      el('button', {
+        class: `rating-btn ${meta.className}`,
+        type: 'button',
+        dataset: { rating },
+        'aria-label': `${meta.label} (${meta.hint})`,
+        onclick: () => rate(rating),
+      }, [el('span', {}, meta.label), el('small', {}, meta.hint)]),
+    );
+  }
+  return grid;
+}
+
 export function render() {
   if (!mounted) return;
   const host = body();
@@ -181,17 +205,41 @@ export function render() {
 
   const item = current.items[current.index];
   const s = statsOf();
-  const progressEl = el('div', {}, [progressBar(s.done, s.total, `Đã ôn ${s.done}/${s.total} từ`)]);
-  host.appendChild(progressEl);
+  host.appendChild(el('div', {}, [progressBar(s.done, s.total, `Đã ôn ${s.done}/${s.total} từ`)]));
 
-  const card = el('div', { class: 'flashcard', id: 'flashcard', dataset: { flipped: String(Boolean(current.revealed)) } });
-  const inner = el('div', { class: 'flashcard-inner' });
+  if (saveError) {
+    host.appendChild(
+      el('div', { class: 'boot-error', style: { marginBottom: '1rem' } }, [
+        `Đánh giá vừa rồi chưa lưu được: ${saveError}`,
+        el('br'),
+        el('button', {
+          class: 'btn btn-primary btn-sm',
+          type: 'button',
+          style: { marginTop: '0.5rem' },
+          onclick: () => {
+            saveError = null;
+            render();
+          },
+        }, 'Thử lại'),
+      ]),
+    );
+  }
+
+  const card = el('div', {
+    class: 'flashcard',
+    id: 'flashcard',
+    dataset: { flipped: String(Boolean(current.revealed)) },
+    tabindex: '0',
+    role: 'button',
+    'aria-label': current.revealed ? `Đáp án của ${item.word}` : `Thẻ từ ${item.word}. Nhấn để xem đáp án.`,
+  });
 
   // MẶT TRƯỚC
   const front = el('div', { class: 'flashcard-face flashcard-front' }, [
     el('div', { class: 'fc-bucket' }, [
-      el('span', { class: `tag ${item.bucket === 'new' ? 'tag-blue' : item.bucket === 'backlog' ? 'tag-amber' : ''}` },
-        bucketLabel(item.bucket)),
+      el('span', {
+        class: `tag ${item.bucket === 'new' ? 'tag-blue' : item.bucket === 'backlog' ? 'tag-amber' : ''}`,
+      }, bucketLabel(item.bucket)),
     ]),
     el('h2', { class: 'fc-word han', lang: 'zh' }, item.word),
     el('button', {
@@ -201,7 +249,10 @@ export function render() {
       'aria-label': `Nghe phát âm ${item.word}`,
       onclick: (e) => {
         e.stopPropagation();
-        if (!speakable(item.word)) return toast('Trình duyệt không hỗ trợ phát âm.', 'error');
+        if (!speakable(item.word)) {
+          toast('Trình duyệt không hỗ trợ phát âm.', 'error');
+          return;
+        }
         speak(item.word);
       },
     }, '🔊'),
@@ -214,28 +265,32 @@ export function render() {
     el('p', { class: 'fc-pinyin' }, item.pinyin),
     item.pos ? el('p', { class: 'fc-pos' }, item.pos) : null,
     el('p', { class: 'fc-meaning' }, item.meaning),
-    el('div', { class: 'fc-tags' }, [
-      item.hsk ? el('span', { class: 'tag tag-blue' }, labelHsk(item.hsk)) : null,
-      item.topic ? el('span', { class: 'tag tag-green' }, labelTopic(item.topic)) : null,
-    ]),
+    item.hsk || item.topic
+      ? el('div', { class: 'fc-tags' }, [
+          item.hsk ? el('span', { class: 'tag tag-blue' }, labelHsk(item.hsk)) : null,
+          item.topic ? el('span', { class: 'tag tag-green' }, labelTopic(item.topic)) : null,
+        ])
+      : null,
     item.example || item.example_meaning
       ? el('div', { class: 'fc-example' }, [
           item.example ? el('div', { class: 'han', lang: 'zh' }, item.example) : null,
           item.example_pinyin ? el('div', { class: 'pinyin-line' }, item.example_pinyin) : null,
           item.example_meaning ? el('div', { class: 'vi-line' }, item.example_meaning) : null,
           item.example && speakable(item.example)
-            ? el('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => speak(item.example) }, '🔊 Nghe câu')
+            ? el('button', {
+                class: 'btn btn-ghost btn-sm',
+                type: 'button',
+                onclick: (e) => {
+                  e.stopPropagation();
+                  speak(item.example);
+                },
+              }, '🔊 Nghe câu')
             : null,
         ])
       : null,
-    item.progress?.next_review_at
-      ? el('p', { class: 'fc-hint' }, `Lịch hiện tại: ${formatNextReview(item.progress.next_review_at)}`)
-      : null,
   ]);
 
-  inner.append(front, back);
-  card.appendChild(inner);
-
+  card.append(el('div', { class: 'flashcard-inner' }, [front, back]));
   front.addEventListener('click', () => revealAnswer());
   card.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -243,33 +298,16 @@ export function render() {
       revealAnswer();
     }
   });
-  card.tabIndex = 0;
-
   host.appendChild(card);
 
-  const actions = el('div', { class: 'flashcard-actions' });
-  if (!current.revealed) {
-    actions.appendChild(
-      el('button', { class: 'btn btn-primary btn-lg', type: 'button', id: 'reveal-btn', onclick: revealAnswer }, 'Xem đáp án'),
-    );
-  } else {
-    const grid = el('div', { class: 'rating-grid', id: 'rating-grid' });
-    for (const [rating, meta] of Object.entries(RATING_META)) {
-      grid.appendChild(
-        el('button', {
-          class: `rating-btn ${meta.className}`,
-          type: 'button',
-          dataset: { rating },
-          onclick: () => rate(rating),
-        }, [el('span', {}, meta.label), el('small', {}, meta.hint)]),
-      );
-    }
-    host.appendChild(grid);
-  }
+  host.appendChild(
+    current.revealed
+      ? ratingGrid()
+      : el('div', { class: 'flashcard-actions' }, [
+          el('button', { class: 'btn btn-primary btn-lg', type: 'button', id: 'reveal-btn', onclick: revealAnswer }, 'Xem đáp án'),
+        ]),
+  );
 
-  host.appendChild(actions);
-
-  // Tóm tắt hàng đợi
   host.appendChild(
     el('div', { class: 'queue-summary' }, [
       el('span', { class: 'tag' }, `Từ cũ đến hạn: ${current.counts?.dueInQueue ?? 0}`),
@@ -286,7 +324,7 @@ function bucketLabel(bucket) {
 }
 
 function renderEmpty(plan) {
-  const wrap = el('div', { class: 'card empty-state' }, [
+  return el('div', { class: 'card empty-state' }, [
     el('h2', {}, plan.counts.newAvailable ? 'Đã hết từ cần ôn hôm nay' : 'Kho từ đang trống'),
     el('p', { class: 'muted' }, plan.counts.newAvailable
       ? `Còn ${plan.counts.newAvailable} từ mới chưa phân bổ (giới hạn từ mới/ngày: ${state.settings?.new_words_per_day ?? 10}).`
@@ -296,7 +334,6 @@ function renderEmpty(plan) {
       el('a', { class: 'btn btn-outline', href: '#import' }, 'Nhập CSV'),
     ]),
   ]);
-  return wrap;
 }
 
 function renderDone() {
@@ -326,23 +363,15 @@ export function revealAnswer() {
   if (!current || current.revealed) return;
   current.revealed = true;
   const card = document.getElementById('flashcard');
-  if (card) card.dataset.flipped = 'true';
-  const revealBtn = document.getElementById('reveal-btn');
-  if (revealBtn) revealBtn.remove();
+  if (card) {
+    card.dataset.flipped = 'true';
+    card.setAttribute('aria-label', `Đáp án của ${current.items[current.index]?.word || ''}`);
+  }
+  document.getElementById('reveal-btn')?.remove();
 
   const host = body();
   if (host && !document.getElementById('rating-grid')) {
-    const grid = el('div', { class: 'rating-grid', id: 'rating-grid' });
-    for (const [rating, meta] of Object.entries(RATING_META)) {
-      grid.appendChild(
-        el('button', {
-          class: `rating-btn ${meta.className}`,
-          type: 'button',
-          dataset: { rating },
-          onclick: () => rate(rating),
-        }, [el('span', {}, meta.label), el('small', {}, meta.hint)]),
-      );
-    }
+    const grid = ratingGrid();
     host.appendChild(grid);
     grid.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
@@ -361,12 +390,11 @@ export async function rate(rating) {
   try {
     let previous = item.progress || null;
     if (item.bucket === 'new') {
-      // Từ mới chưa có learning_progress: tạo hồ sơ "new" để RPC có thể update.
       try {
         previous = await startLearning(item.id);
         item.progress = previous;
       } catch (error) {
-        // Nếu RLS trigger cấm thì vẫn để RPC tự upsert.
+        // RPC record_review vẫn tự upsert nếu bước này thất bại.
         console.warn('startLearning failed, continue with RPC', error);
       }
     }
@@ -385,31 +413,37 @@ export async function rate(rating) {
     current.index += 1;
     current.revealed = false;
     current.saving = false;
+    saveError = null;
     persist();
     render();
     markSessionProgress();
   } catch (error) {
     current.saving = false;
+    saveError = getErrorMessage(error);
     document.querySelectorAll('.rating-btn').forEach((b) => (b.disabled = false));
-    toast(`Chưa lưu được đánh giá: ${getErrorMessage(error)}`, 'error', 5000);
+    toast(`Chưa lưu được đánh giá: ${saveError}`, 'error', 5000);
   }
 }
 
-async function markSessionProgress() {
+function sessionPayload(completed) {
   const s = statsOf();
+  return {
+    sessionDate: current.dayKey,
+    counts: {
+      newInQueue: current.counts?.newInQueue || 0,
+      dueInQueue: current.counts?.dueInQueue || 0,
+      backlogInQueue: current.counts?.backlogInQueue || 0,
+      completed: s.done,
+    },
+    status: completed ? 'completed' : 'in_progress',
+    startedAt: current.startedAt,
+    completedAt: completed ? new Date().toISOString() : null,
+  };
+}
+
+async function markSessionProgress() {
   try {
-    await markSession({
-      sessionDate: current.dayKey,
-      counts: {
-        newInQueue: current.counts?.newInQueue || 0,
-        dueInQueue: current.counts?.dueInQueue || 0,
-        backlogInQueue: current.counts?.backlogInQueue || 0,
-        completed: s.done,
-      },
-      status: s.done >= current.items.length ? 'completed' : 'in_progress',
-      startedAt: current.startedAt,
-      completedAt: s.done >= current.items.length ? new Date().toISOString() : null,
-    });
+    await markSession(sessionPayload(statsOf().done >= current.items.length));
   } catch (error) {
     console.warn('markSession failed', error);
   }
@@ -419,20 +453,8 @@ let finalized = false;
 async function finalizeSession() {
   if (finalized) return;
   finalized = true;
-  const s = statsOf();
   try {
-    await markSession({
-      sessionDate: current.dayKey,
-      counts: {
-        newInQueue: current.counts?.newInQueue || 0,
-        dueInQueue: current.counts?.dueInQueue || 0,
-        backlogInQueue: current.counts?.backlogInQueue || 0,
-        completed: s.done,
-      },
-      status: 'completed',
-      startedAt: current.startedAt,
-      completedAt: new Date().toISOString(),
-    });
+    await markSession(sessionPayload(true));
   } catch (error) {
     console.warn('finalizeSession failed', error);
   }
@@ -450,6 +472,7 @@ export async function addToReview(row) {
     if (existing) existing.progress = progress;
     invalidateQueue();
     current = null;
+    saveError = null;
     toast(`Đã đưa “${row.word}” vào danh sách ôn tập.`, 'success');
   } catch (error) {
     toast(getErrorMessage(error), 'error');
@@ -460,11 +483,13 @@ export async function addToReview(row) {
 export function startToday() {
   invalidateQueue();
   current = null;
+  saveError = null;
   resetFinalizeFlag();
-  location.hash = '#review';
-  if (location.hash === '#review') {
-    mounted = true;
-    restoreOrBuildQueue();
-    render();
+  mounted = true;
+  if (location.hash !== '#review') {
+    location.hash = '#review';
+    return; // hashchange → navigate() sẽ render
   }
+  restoreOrBuildQueue();
+  render();
 }
