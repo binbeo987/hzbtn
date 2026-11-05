@@ -13,13 +13,15 @@ import { mountCalendar, renderCalendar } from './calendar.js';
 import { mountSettings, renderSettings } from './settings.js';
 import { mountBackup } from './backup.js';
 import { renderHome } from './home.js';
+import { renderQuiz, handleQuizKey } from './quiz.js';
 import { el, esc, getErrorMessage, toast } from './ui.js';
 
-const PAGES = ['home', 'dictionary', 'review', 'vocabulary', 'import', 'calendar', 'settings'];
+const PAGES = ['home', 'dictionary', 'review', 'quiz', 'vocabulary', 'import', 'calendar', 'settings'];
 const PAGE_TITLES = {
   home: 'Hán Ngữ – Từ điển & ôn từ vựng',
   dictionary: 'Tra từ – Hán Ngữ',
   review: 'Ôn tập hôm nay – Hán Ngữ',
+  quiz: 'Trắc nghiệm từ vựng – Hán Ngữ',
   vocabulary: 'Kho từ vựng – Hán Ngữ',
   import: 'Nhập CSV – Hán Ngữ',
   calendar: 'Lịch ôn tập – Hán Ngữ',
@@ -38,6 +40,7 @@ const MENU_GROUPS = [
     items: [
       { page: 'home', label: 'Trang chủ' },
       { page: 'review', label: 'Ôn tập hôm nay', hint: 'Từ mới + từ cần ôn' },
+      { page: 'quiz', label: 'Trắc nghiệm', hint: 'Chọn đáp án đúng' },
       { page: 'calendar', label: 'Lịch ôn tập' },
     ],
   },
@@ -324,6 +327,9 @@ async function renderPage(page) {
       mountReview();
       renderReview();
       break;
+    case 'quiz':
+      renderQuiz();
+      break;
     case 'vocabulary':
       await renderVocabulary();
       break;
@@ -408,6 +414,10 @@ function setupRouting() {
 }
 
 function setupGlobalEvents() {
+  document.addEventListener('keydown', (event) => {
+    if (current === 'quiz' && handleQuizKey(event)) return;
+  });
+
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible' || !state.ready) return;
     if (current === 'review') renderReview();

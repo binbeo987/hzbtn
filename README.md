@@ -187,7 +187,20 @@ Thời gian lưu **UTC**, hiển thị theo múi giờ máy.
 Vượt giới hạn thì cắt từ mới (chưa đánh dấu đã học, tự xét cho buổi sau); không lặp từ trong buổi;
 nghỉ một ngày thì hôm sau các từ đến hạn tự thành tồn đọng.
 
-## 12. Kiểm thử
+## 12. Trắc nghiệm từ vựng (game ôn tập)
+
+Menu **Học → Trắc nghiệm** (`#quiz`):
+
+- **Kiểu câu hỏi**: Hán tự → nghĩa · Nghĩa → Hán tự · Hán tự → pinyin · Ngẫu nhiên cả 3.
+- **Số câu**: 10 / 20 / 30 (tự giảm nếu kho từ chưa đủ).
+- Ưu tiên từ **đến hạn và tồn đọng** (cùng hàng đợi với Flashcard), sau đó tới từ đã học / từ mới.
+- 4 đáp án, đáp án nhiễu ưu tiên cùng HSK/chủ đề; hiển thị kết quả đúng/sai ngay và phím tắt **1–4 / A–D**.
+- Trả lời **sai** → từ được xếp vào buổi ôn hôm nay (RPC `queue_for_review`), không tạo bản ghi ôn giả.
+- Màn kết quả: điểm, %, chuỗi đúng dài nhất, danh sách từ sai, nút **Ôn tập các từ này** (đưa sang Flashcard), **Chơi lại** (giữ kiểu câu hỏi và số câu).
+- Kỷ lục lưu ở LocalStorage (`hanngu:quiz-best`), chỉ dùng để hiển thị thành tích.
+- File: `js/quiz.js`; test: `tests/quiz.test.mjs` (sinh câu hỏi, đáp án nhiễu, kiểu câu hỏi).
+
+## 13. Kiểm thử
 
 ```bash
 npm test
@@ -196,7 +209,7 @@ npm test
 Đã kiểm: khoảng cách ban đầu, SM-2, EF ≥ 1.3, due/backlog/new, giới hạn buổi, tồn đọng, lịch tháng,
 parser CSV (UTF-8/BOM/ngoặc kép/10.000 dòng), validate backup.
 
-## 13. Cập nhật phiên bản
+## 14. Cập nhật phiên bản
 
 Sửa `APP_CONFIG.version` (`js/config.js`) và `version` (`package.json`), commit, push.
 Thay đổi schema: thêm `database/migrations/YYYYMMDD_mo-ta.sql`, chạy trên Supabase trước khi deploy.

@@ -95,6 +95,10 @@
 
   .button-row.wrap .btn { flex: 1 1 auto; }
 
+  .quiz-options { grid-template-columns: minmax(0, 1fr); }
+  .quiz-option { min-height: 52px; padding: .7rem .85rem; }
+  .quiz-topbar { gap: .5rem; }
+  .quiz-score-ring { width: 112px; height: 112px; }
   .import-steps { font-size: 0.72rem; }
   .step { padding: 0.25rem 0.55rem; }
 }
