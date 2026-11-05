@@ -62,19 +62,65 @@ const MENU_GROUPS = [
 let current = null;
 
 /* -------------------------------------------------------------------------- */
-/* LỖI KHỞI ĐỘNG                                                               */
+/* LỖI KẾT NỐI                                                                 */
+/* Card lỗi được TỰ TẠO bằng JS khi cần, không phụ thuộc phần tử trong HTML,  */
+/* nên luôn hiện được dù index.html có bị chỉnh sửa.                          */
 /* -------------------------------------------------------------------------- */
+const BOOT_STYLES = `
+  position: fixed; inset: 0; z-index: 200; display: grid; place-items: center;
+  padding: clamp(1rem, 4vw, 3rem); background: rgba(248, 250, 252, 0.94);
+  overscroll-behavior: contain;
+`;
+
+function ensureBootCard() {
+  let boot = document.getElementById('boot-screen');
+  if (boot && boot.querySelector('#boot-error')) return boot;
+
+  boot = document.createElement('div');
+  boot.id = 'boot-screen';
+  boot.setAttribute('role', 'alert');
+  boot.setAttribute('aria-live', 'assertive');
+  boot.style.cssText = BOOT_STYLES;
+
+  const card = document.createElement('div');
+  card.className = 'boot-card card';
+  card.style.cssText =
+    'width:min(100%,560px);max-height:90vh;overflow:auto;text-align:left;border-color:#fecaca;background:#fffafa;' +
+    'border-radius:18px;padding:clamp(1.1rem,3vw,1.6rem);box-shadow:0 16px 48px rgba(15,23,42,.14);font:inherit;';
+
+  const title = document.createElement('h1');
+  title.id = 'boot-title';
+  title.style.cssText = 'font-size:1.2rem;margin:0 0 .3rem;color:#7f1d1d;';
+  title.textContent = 'Không kết nối được dữ liệu';
+
+  const msg = document.createElement('p');
+  msg.id = 'boot-message';
+  msg.className = 'muted';
+  msg.style.cssText = 'color:#64748b;margin:0 0 .9rem;font-size:.92rem;';
+  msg.textContent = 'Kiểm tra kết nối Supabase rồi thử lại.';
+
+  const err = document.createElement('div');
+  err.id = 'boot-error';
+  err.className = 'boot-error';
+  err.style.cssText =
+    'background:#fee2e2;border:1px solid #fecaca;color:#7f1d1d;border-radius:12px;padding:.9rem;font-size:.88rem;word-break:break-word;';
+
+  card.append(title, msg, err);
+  boot.appendChild(card);
+  document.body.appendChild(boot);
+  return boot;
+}
+
 function showBootError(error) {
-  const boot = document.getElementById('boot-screen');
+  const boot = ensureBootCard();
   const title = document.getElementById('boot-title');
   const msg = document.getElementById('boot-message');
   const err = document.getElementById('boot-error');
-  if (boot) boot.hidden = false;
+  boot.hidden = false;
   document.body.classList.add('is-disconnected');
   if (title) title.textContent = 'Không kết nối được dữ liệu';
   if (msg) msg.textContent = 'Bấm “Thử lại” sau khi đã khắc phục, hoặc vào Cài đặt để chỉnh kết nối Supabase.';
   if (!err) return;
-  err.hidden = false;
 
   const retry = '<button class="btn btn-primary btn-sm" type="button" id="boot-retry" style="margin-top:0.75rem">Thử lại</button>';
   const bindRetry = () => {
@@ -84,7 +130,7 @@ function showBootError(error) {
   if (error?.message === 'MISSING_CONFIG') {
     err.innerHTML = `
       <strong>Thiếu cấu hình Supabase.</strong>
-      <ol>
+      <ol style="margin:.5rem 0 0;padding-left:1.2rem">
         <li>Tạo project tại <a href="https://supabase.com" target="_blank" rel="noopener">supabase.com</a>.</li>
         <li>Chạy <code>database/schema.sql</code> rồi <code>database/rls.sql</code> trong SQL Editor.</li>
         <li>Thêm biến môi trường <code>SUPABASE_URL</code> và <code>SUPABASE_ANON_KEY</code> trên Vercel
@@ -99,9 +145,9 @@ function showBootError(error) {
   if (error?.code === 'ACCESS_KEY_REQUIRED') {
     err.innerHTML = `
       <strong>Cần mã truy cập.</strong>
-      <p class="small">Dữ liệu trên Supabase đang được bảo vệ bằng mã truy cập. Nhập mã bên dưới để mở kho từ.</p>
-      <form id="boot-access-form" class="button-row" style="margin-top:0.5rem">
-        <input class="input" id="boot-access-key" type="password" placeholder="Mã truy cập" autocomplete="current-password" required />
+      <p style="margin:.3rem 0 .5rem">Dữ liệu trên Supabase đang được bảo vệ bằng mã truy cập. Nhập mã bên dưới để mở kho từ.</p>
+      <form id="boot-access-form" class="button-row" style="margin-top:0.5rem;display:flex;gap:.5rem">
+        <input class="input" id="boot-access-key" type="password" placeholder="Mã truy cập" autocomplete="current-password" required style="flex:1;min-width:0" />
         <button class="btn btn-primary" type="submit">Mở khoá</button>
       </form>`;
     document.getElementById('boot-access-form')?.addEventListener('submit', async (e) => {
@@ -111,17 +157,17 @@ function showBootError(error) {
       try {
         await refreshAll();
         await enterApp();
-        if (boot) boot.hidden = true; // đã vào được: ẩn hẳn thông báo lỗi
       } catch (next) {
         setAccessKey('');
         showBootError(next);
       }
     });
+    document.getElementById('boot-access-key')?.focus();
     return;
   }
 
   err.innerHTML = `<strong>${esc(error?.message || 'Lỗi không xác định')}</strong><br>
-    <span class="small">${esc(error?.detail || '')}</span><br>${retry}`;
+    <span style="font-size:.82rem;color:#991b1b">${esc(error?.detail || '')}</span><br>${retry}`;
   bindRetry();
 }
 
@@ -380,11 +426,9 @@ async function enterApp() {
 /** Ẩn thanh thông báo lỗi khi dữ liệu đã kết nối được. */
 function hideBootError() {
   const boot = document.getElementById('boot-screen');
-  if (boot) boot.hidden = true;
-  const err = document.getElementById('boot-error');
-  if (err) {
-    err.hidden = true;
-    err.innerHTML = '';
+  if (boot) {
+    boot.hidden = true;
+    boot.remove(); // dọn hẳn, lần lỗi sau sẽ tạo lại
   }
   document.body.classList.remove('is-disconnected');
 }
