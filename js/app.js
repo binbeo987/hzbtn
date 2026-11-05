@@ -66,14 +66,20 @@ let current = null;
 /* -------------------------------------------------------------------------- */
 function showBootError(error) {
   const boot = document.getElementById('boot-screen');
+  const title = document.getElementById('boot-title');
   const msg = document.getElementById('boot-message');
   const err = document.getElementById('boot-error');
-  if (msg) msg.textContent = 'Không thể kết nối dữ liệu.';
   if (boot) boot.hidden = false;
+  document.body.classList.add('is-disconnected');
+  if (title) title.textContent = 'Không kết nối được dữ liệu';
+  if (msg) msg.textContent = 'Bấm “Thử lại” sau khi đã khắc phục, hoặc vào Cài đặt để chỉnh kết nối Supabase.';
   if (!err) return;
   err.hidden = false;
 
   const retry = '<button class="btn btn-primary btn-sm" type="button" id="boot-retry" style="margin-top:0.75rem">Thử lại</button>';
+  const bindRetry = () => {
+    document.getElementById('boot-retry')?.addEventListener('click', () => location.reload());
+  };
 
   if (error?.message === 'MISSING_CONFIG') {
     err.innerHTML = `
@@ -84,7 +90,9 @@ function showBootError(error) {
         <li>Thêm biến môi trường <code>SUPABASE_URL</code> và <code>SUPABASE_ANON_KEY</code> trên Vercel
             (hoặc meta <code>supabase-url</code> / <code>supabase-anon-key</code> trong index.html khi chạy local).</li>
       </ol>
-      <p>Xem chi tiết trong <code>README.md</code>.</p>`;
+      <p>Hoặc mở trang <b>Cài đặt → Kết nối Supabase</b> để nhập URL và anon key.</p>
+      ${retry}`;
+    bindRetry();
     return;
   }
 
@@ -103,6 +111,7 @@ function showBootError(error) {
       try {
         await refreshAll();
         await enterApp();
+        if (boot) boot.hidden = true; // đã vào được: ẩn hẳn thông báo lỗi
       } catch (next) {
         setAccessKey('');
         showBootError(next);
@@ -113,7 +122,7 @@ function showBootError(error) {
 
   err.innerHTML = `<strong>${esc(error?.message || 'Lỗi không xác định')}</strong><br>
     <span class="small">${esc(error?.detail || '')}</span><br>${retry}`;
-  document.getElementById('boot-retry')?.addEventListener('click', () => location.reload());
+  bindRetry();
 }
 
 /* -------------------------------------------------------------------------- */
@@ -242,12 +251,8 @@ async function navigate(page) {
   document.querySelectorAll('.page').forEach((section) => {
     section.hidden = section.dataset.page !== page;
   });
-  const boot = document.getElementById('boot-screen');
-  if (boot && state.ready) {
-    boot.hidden = true;
-    const err = document.getElementById('boot-error');
-    if (err) err.hidden = true;
-  }
+  // Dữ liệu đã sẵn sàng thì không bao giờ hiện thanh lỗi khởi động.
+  if (state.ready) hideBootError();
   closeAllMenus();
   closeMobileDrawer();
 
@@ -368,10 +373,20 @@ function setupGlobalEvents() {
 }
 
 async function enterApp() {
-  document.querySelectorAll('#main, .app-header, .app-footer').forEach((node) => node.classList.remove('is-locked'));
+  hideBootError();
+  await navigate(pageFromHash());
+}
+
+/** Ẩn thanh thông báo lỗi khi dữ liệu đã kết nối được. */
+function hideBootError() {
   const boot = document.getElementById('boot-screen');
   if (boot) boot.hidden = true;
-  await navigate(pageFromHash());
+  const err = document.getElementById('boot-error');
+  if (err) {
+    err.hidden = true;
+    err.innerHTML = '';
+  }
+  document.body.classList.remove('is-disconnected');
 }
 
 async function init() {

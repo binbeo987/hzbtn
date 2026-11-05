@@ -31,22 +31,6 @@
     <link rel="apple-touch-icon" href="./assets/icon-192.png" />
     <link rel="stylesheet" href="./css/style.css" />
     <link rel="stylesheet" href="./css/responsive.css" />
-    <style>
-      .boot-spinner {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        border: 3px solid #dbeafe;
-        border-top-color: #2563eb;
-        margin: 0 auto 1rem;
-        animation: hb-spin 0.8s linear infinite;
-      }
-      @keyframes hb-spin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
-    </style>
   </head>
   <body>
     <a class="skip-link" href="#main">Bỏ qua điều hướng</a>
@@ -89,13 +73,13 @@
     </header>
 
     <main id="main" class="container app-main" tabindex="-1">
-      <!-- Màn hình khởi động / lỗi cấu hình / nhập mã truy cập -->
-      <section id="boot-screen" class="boot-screen" aria-live="polite">
+      <!-- Chỉ hiện khi KHÔNG kết nối được dữ liệu (lỗi cấu hình / sai mã / mất mạng).
+           Kết nối thành công thì ẩn hoàn toàn, giao diện chính hiện ngay. -->
+      <section id="boot-screen" class="boot-screen" role="alert" aria-live="assertive" hidden>
         <div class="boot-card card">
-          <div class="boot-spinner" aria-hidden="true"></div>
-          <h1>Đang kết nối dữ liệu…</h1>
-          <p class="muted" id="boot-message">Đang tải kho từ vựng.</p>
-          <div id="boot-error" class="boot-error" hidden></div>
+          <h1 id="boot-title">Không kết nối được dữ liệu</h1>
+          <p class="muted" id="boot-message">Kiểm tra kết nối Supabase rồi thử lại.</p>
+          <div id="boot-error" class="boot-error"></div>
         </div>
       </section>
 
