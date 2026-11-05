@@ -29,11 +29,16 @@ export function renderHome() {
   }
 
   // Tiến độ hôm nay: dựa trên số từ đã đánh giá trong buổi hôm nay
+  // Từ đã đánh giá hôm nay = từ trong buổi học có đánh giá HOẶC lịch sử ôn hôm nay.
+  const queueIds = new Set((state.queue?.items || []).map((i) => i.id));
   const session = state.rows.filter(
-    (r) => r.progress?.last_reviewed_at && localDayKey(new Date(r.progress.last_reviewed_at), tz) === todayKey,
+    (r) =>
+      (queueIds.has(r.id) && Boolean(state.queue?.ratings?.[r.id])) ||
+      (r.progress?.last_reviewed_at && localDayKey(new Date(r.progress.last_reviewed_at), tz) === todayKey),
   ).length;
   const target = Math.max(plan.items.length, session);
-  const pct = target ? Math.min(100, Math.round((session / target) * 100)) : 0;
+  let pct = target ? Math.min(100, Math.round((session / target) * 100)) : 0;
+  if (!target) pct = stats.total && !plan.counts.newAvailable ? 100 : 0;
 
   const value = document.getElementById('hero-progress-value');
   if (value) value.textContent = `${pct}%`;

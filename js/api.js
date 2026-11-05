@@ -89,6 +89,7 @@ export async function updateVocabulary(id, patch) {
 }
 
 export async function deleteVocabulary(ids) {
+  invalidateBackupSnapshot();
   for (const part of chunk([].concat(ids), 200)) {
     await rpc('delete_vocabulary', { p_ids: part });
   }
@@ -107,6 +108,7 @@ export async function getVocabulary(id) {
 /* -------------------------------------------------------------------------- */
 
 export async function toggleFavorite(vocabularyId, favorite) {
+  invalidateBackupSnapshot();
   const data = await rpc('toggle_favorite', { p_vocabulary_id: vocabularyId, p_favorite: Boolean(favorite) });
   return data || { favorite: Boolean(favorite) };
 }
@@ -116,7 +118,7 @@ export async function removeFavorite(vocabularyId) {
 }
 
 export async function listFavorites() {
-  const data = await rpc('get_backup');
+  const data = await loadBackupSnapshot();
   return (data?.favorites) || [];
 }
 
@@ -129,6 +131,7 @@ export async function listFavorites() {
  * Dữ liệu SM-2 do client tính (js/scheduler.js) để mọi thiết bị ra cùng kết quả.
  */
 export async function recordReview({ vocabularyId, rating, previousNextReviewAt, schedule }) {
+  invalidateBackupSnapshot();
   if (!['again', 'hard', 'good', 'easy'].includes(rating)) throw new Error(`Rating không hợp lệ: ${rating}`);
   const data = await rpc('record_review', {
     p_vocabulary_id: vocabularyId,
@@ -159,6 +162,33 @@ export async function queueForReview(vocabularyId) {
 }
 
 /* -------------------------------------------------------------------------- */
+/* BACKUP SNAPSHOT (cache 1 lần cho lịch sử / cài đặt / xuất file)             */
+/* -------------------------------------------------------------------------- */
+
+let backupCache = null;
+let backupPromise = null;
+
+/** Đọc toàn bộ dữ liệu một lần; các lần gọi sau dùng lại kết quả đã tải. */
+export async function loadBackupSnapshot({ force = false } = {}) {
+  if (backupCache && !force) return backupCache;
+  if (backupPromise && !force) return backupPromise;
+  backupPromise = rpc('get_backup')
+    .then((data) => {
+      backupCache = data || {};
+      return backupCache;
+    })
+    .finally(() => {
+      backupPromise = null;
+    });
+  return backupPromise;
+}
+
+/** Xoá cache sau khi có thay đổi dữ liệu (ghi đánh giá, import, xoá…). */
+export function invalidateBackupSnapshot() {
+  backupCache = null;
+}
+
+/* -------------------------------------------------------------------------- */
 /* DAILY SESSIONS                                                              */
 /* -------------------------------------------------------------------------- */
 
@@ -177,17 +207,17 @@ export async function markSession({ sessionDate, counts, status, startedAt = nul
 }
 
 export async function listSessions() {
-  const data = await rpc('get_backup');
+  const data = await loadBackupSnapshot();
   return (data?.daily_sessions) || [];
 }
 
 export async function listReviewRecords() {
-  const data = await rpc('get_backup');
+  const data = await loadBackupSnapshot();
   return (data?.review_records) || [];
 }
 
 export async function listProgress() {
-  const data = await rpc('get_backup');
+  const data = await loadBackupSnapshot();
   return (data?.learning_progress) || [];
 }
 
@@ -218,6 +248,7 @@ export async function updateSettings(patch) {
  * - mode 'update': cập nhật nội dung từ đã tồn tại, KHÔNG chạm learning_progress
  */
 export async function importVocabulary({ rows, mode, batchSize = 500, existingWordIds, onProgress }) {
+  invalidateBackupSnapshot();
   const inserted = [];
   const updated = [];
   const skipped = [];
@@ -278,7 +309,7 @@ export async function findExistingWords(words) {
 
 /** Xuất toàn bộ dữ liệu dưới dạng object (JSON) — 1 lần gọi RPC. */
 export async function getFullBackup() {
-  const data = await rpc('get_backup');
+  const data = await loadBackupSnapshot({ force: true });
   return {
     app: 'han-ngu',
     version: '1.1.0',
@@ -293,9 +324,11 @@ export async function getFullBackup() {
 }
 
 export async function restoreBackup(data) {
+  invalidateBackupSnapshot();
   return rpc('restore_backup', { p_data: data });
 }
 
 export async function deleteAllUserData() {
+  invalidateBackupSnapshot();
   await rpc('delete_all_data');
 }

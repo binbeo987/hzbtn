@@ -15,7 +15,8 @@ export default function handler(req, res) {
     process.env.SUPABASE_PUBLISHABLE_KEY ||
     DEFAULTS.SUPABASE_ANON_KEY;
 
-  res.setHeader('Cache-Control', 'no-store');
+  // Anon key là thông tin công khai: cache để giảm 1 request mỗi lần mở trang.
+  res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=300');
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.status(200).json({
     SUPABASE_URL: url,
