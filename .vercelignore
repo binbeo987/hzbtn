@@ -22,3 +22,5 @@ samples/
 database/
 .kilo/
 .gitignore
+smoke-*.png
+check-*.png

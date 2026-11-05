@@ -10,3 +10,7 @@ node_modules/
 .DS_Store
 Thumbs.db
 tests/tmp/
+
+# Anh chup kiem thu tu dong
+assets/smoke-*.png
+assets/check-*.png
