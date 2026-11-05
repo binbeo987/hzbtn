@@ -15,10 +15,70 @@
 
 const DEFAULT_CONFIG = { supabaseUrl: '', supabaseAnonKey: '' };
 
+/** Cấu hình tùy chỉnh lưu trên máy (nhập ở trang Cài đặt). */
+const OVERRIDE_KEY = 'hanngu:supabase-config';
+
 const ENV_KEYS = {
   supabaseUrl: ['SUPABASE_URL', 'VITE_SUPABASE_URL'],
   supabaseAnonKey: ['SUPABASE_ANON_KEY', 'VITE_SUPABASE_ANON_KEY', 'SUPABASE_PUBLISHABLE_KEY'],
 };
+
+/** Chuẩn hoá URL dự án: thêm https://, bỏ dấu / cuối. */
+export function normalizeSupabaseUrl(value) {
+  let url = String(value || '').trim();
+  if (!url) return '';
+  if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
+  return url.replace(/\/+$/, '');
+}
+
+/** Kiểm tra nhanh cặp URL + key; trả về danh sách lỗi (rỗng = hợp lệ). */
+export function validateSupabaseConfig({ url, key }) {
+  const errors = [];
+  if (!normalizeSupabaseUrl(url)) errors.push('Chưa nhập Project URL.');
+  else if (!/^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.supabase\.(co|in)$/i.test(normalizeSupabaseUrl(url))) {
+    errors.push('Project URL phải có dạng https://<project-ref>.supabase.co');
+  }
+  const anonKey = String(key || '').trim();
+  if (!anonKey) errors.push('Chưa nhập anon / publishable key.');
+  else if (anonKey.length < 30) errors.push('Anon key quá ngắn, hãy dán đầy đủ key.');
+  else if (/^sb_secret_/i.test(anonKey) || /service_role/i.test(anonKey)) {
+    errors.push('Đây là secret key — chỉ dùng anon / publishable key ở frontend.');
+  }
+  return errors;
+}
+
+export function readConfigOverride() {
+  try {
+    const raw = localStorage.getItem(OVERRIDE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || !data.supabaseUrl || !data.supabaseAnonKey) return null;
+    return { supabaseUrl: data.supabaseUrl, supabaseAnonKey: data.supabaseAnonKey };
+  } catch {
+    return null;
+  }
+}
+
+export function saveConfigOverride({ url, key }) {
+  const config = {
+    supabaseUrl: normalizeSupabaseUrl(url),
+    supabaseAnonKey: String(key || '').trim(),
+  };
+  localStorage.setItem(OVERRIDE_KEY, JSON.stringify(config));
+  return config;
+}
+
+export function clearConfigOverride() {
+  try {
+    localStorage.removeItem(OVERRIDE_KEY);
+  } catch {
+    /* bỏ qua */
+  }
+}
+
+export function hasConfigOverride() {
+  return Boolean(readConfigOverride());
+}
 
 async function fromEnvModule(config) {
   try {
@@ -62,14 +122,30 @@ export function getBuildEnv(config) {
   return Object.fromEntries(Object.entries(config).filter(([, v]) => v));
 }
 
-/** Đọc config: meta → /api/config → js/env.js → rỗng. */
+/**
+ * Đọc config theo thứ tự ưu tiên:
+ *   1. Cấu hình nhập tay ở trang Cài đặt (lưu trên máy)
+ *   2. meta trong index.html
+ *   3. js/env.js (sinh lúc build)
+ *   4. /api/config (biến môi trường Vercel)
+ */
 export async function loadConfig() {
   const config = { ...DEFAULT_CONFIG };
-  fromMeta(config);
-  await fromEnvModule(config);
-  await fromApi(config);
 
-  if (config.supabaseUrl && !/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(config.supabaseUrl)) {
+  const override = readConfigOverride();
+  if (override) {
+    config.supabaseUrl = override.supabaseUrl;
+    config.supabaseAnonKey = override.supabaseAnonKey;
+    config.source = 'manual';
+  } else {
+    fromMeta(config);
+    if (config.supabaseUrl && config.supabaseAnonKey) config.source = 'meta';
+    await fromEnvModule(config);
+    if (!config.supabaseUrl || !config.supabaseAnonKey) await fromApi(config);
+    if (config.supabaseUrl && config.supabaseAnonKey && !config.source) config.source = 'env';
+  }
+
+  if (config.supabaseUrl && !/^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.supabase\.(co|in)\/?$/i.test(config.supabaseUrl)) {
     config.warning = 'SUPABASE_URL không đúng định dạng https://<project>.supabase.co';
   }
   if (config.supabaseAnonKey && config.supabaseAnonKey.length < 40) {
@@ -77,6 +153,12 @@ export async function loadConfig() {
   }
   return config;
 }
+
+export const CONFIG_SOURCE_LABELS = {
+  manual: 'Nhập ở trang Cài đặt',
+  meta: 'Cấu hình sẵn trong index.html',
+  env: 'Biến môi trường / api/config',
+};
 
 export function isConfigured(config) {
   return Boolean(config?.supabaseUrl && config?.supabaseAnonKey);

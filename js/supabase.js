@@ -4,7 +4,7 @@
  * truy cập qua các hàm RPC (xem database/rls.sql).
  * ============================================================================= */
 
-import { loadConfig, isConfigured } from './config.js';
+import { loadConfig, isConfigured, validateSupabaseConfig, normalizeSupabaseUrl } from './config.js';
 
 let client = null;
 let config = null;
@@ -49,6 +49,60 @@ export function setAccessKey(value) {
   } catch {
     /* trình duyệt chặn storage */
   }
+}
+
+/**
+ * Tạo client từ một cặp URL + key (không đụng tới client đang chạy).
+ * Dùng để "Kiểm tra kết nối" trước khi lưu cấu hình mới.
+ */
+export function createProbeClient(url, key) {
+  const lib = window.supabase;
+  if (!lib || typeof lib.createClient !== 'function') throw new Error('Không tải được thư viện supabase-js.');
+  return lib.createClient(normalizeSupabaseUrl(url), String(key || '').trim(), {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
+
+/** Thử đọc dữ liệu qua RPC; lỗi trả kèm thông điệp dễ hiểu. */
+export async function testConnection(url, key, accessKeyValue = '') {
+  const errors = validateSupabaseConfig({ url, key });
+  if (errors.length) return { ok: false, message: errors.join(' ') };
+
+  const probe = createProbeClient(url, key);
+  try {
+    const { data, error } = await probe.rpc('get_study_rows', { p_key: accessKeyValue || null });
+    if (error) throw error;
+    return { ok: true, message: `Kết nối thành công · ${(data || []).length} từ trong kho.`, words: (data || []).length };
+  } catch (error) {
+    if (/invalid access key/i.test(error?.message || '')) {
+      return { ok: true, message: 'Kết nối được Supabase nhưng cần đúng mã truy cập (kiểm tra ô “Mã truy cập”).', needsKey: true };
+    }
+    if (/Could not find the function|schema cache/i.test(error?.message || '')) {
+      return { ok: false, message: 'Kết nối được nhưng chưa chạy database/schema.sql và database/rls.sql trên project này.' };
+    }
+    if (/Invalid API key|JWT|apikey/i.test(error?.message || '')) {
+      return { ok: false, message: 'Anon key không hợp lệ với Project URL này.' };
+    }
+    if (/Failed to fetch|NetworkError|ERR_/i.test(error?.message || '')) {
+      return { ok: false, message: 'Không kết nối được tới Project URL (sai URL hoặc bị chặn mạng).' };
+    }
+    return { ok: false, message: error?.message || 'Không kết nối được.' };
+  }
+}
+
+/** Đổi cấu hình đang dùng (sau khi đã kiểm tra). */
+export async function applyRuntimeConfig({ url, key }) {
+  config = {
+    supabaseUrl: normalizeSupabaseUrl(url),
+    supabaseAnonKey: String(key || '').trim(),
+  };
+  const lib = window.supabase;
+  if (!lib || typeof lib.createClient !== 'function') throw new Error('Không tải được thư viện supabase-js.');
+  client = lib.createClient(config.supabaseUrl, config.supabaseAnonKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    global: { headers: { 'x-application-name': 'han-ngu-dictionary' } },
+  });
+  return client;
 }
 
 export async function initSupabase() {

@@ -86,6 +86,21 @@ update public.app_config set value = 'MOT-MA-DAI-VA-KHO-DOAN' where key = 'app_a
 Nếu muốn riêng tư tuyệt đối: chặn public access của Supabase (không cho truy cập từ ngoài),
 hoặc chuyển sang schema có `user_id` + Anonymous Auth (bản cũ trong lịch sử git).
 
+### Cấu hình ngay trong website (không cần deploy lại)
+
+Mở **Cài đặt → Kết nối Supabase → Thay đổi**, nhập **Project URL** và **anon / publishable key**,
+bấm **Kiểm tra kết nối** rồi **Lưu và kết nối**. Giá trị được lưu trên trình duyệt hiện tại
+(LocalStorage, chỉ chứa thông tin công khai) và có độ ưu tiên cao nhất:
+
+1. Nhập ở trang Cài đặt
+2. meta trong index.html
+3. js/env.js (sinh lúc build)
+4. /api/config (biến môi trường Vercel)
+
+Nút **Dùng cấu hình mặc định** xoá cấu hình nhập tay và tải lại trang. Ô **Mã truy cập** nằm cùng
+nhóm để nhập mã bảo vệ kho dữ liệu. Hệ thống từ chối secret key (sb_secret_…) và service_role
+để tránh lộ quyền. Thiếu bảng/RPC, sai key hay sai URL đều được báo ngay trong ô phản hồi.
+
 ## 5. Cấu hình biến môi trường
 
 | Biến | Giá trị |

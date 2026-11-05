@@ -1011,6 +1011,21 @@ textarea.input {
 .check-list li.ok::before { content: "✓ "; color: var(--green); }
 .check-list li.bad::before { content: "✕ "; color: var(--red); }
 
+/* ---------- Cấu hình Supabase ---------- */
+.supabase-panel {
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px dashed var(--line);
+}
+.supabase-panel .field span { font-weight: 600; }
+@media (max-width: 480px) {
+  .supabase-panel .button-row .btn { flex: 1 1 100%; }
+}
+.supabase-panel[hidden] { display: none; }
+.text-error { color: var(--red); font-weight: 600; }
+.text-ok { color: var(--green); font-weight: 600; }
+.info-list dd.mono { max-width: 60%; overflow-wrap: anywhere; }
+
 /* ---------- Footer ---------- */
 .app-footer { border-top: 1px solid var(--line); padding: 1.2rem 0; color: var(--ink-400); font-size: 0.82rem; }
 

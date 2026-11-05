@@ -1,40 +1,44 @@
 /* =============================================================================
- * settings.js - Cài đặt: lịch học hằng ngày, mã truy cập
+ * settings.js - Cài đặt: lịch học, kết nối Supabase, mã truy cập, thông tin
  * ============================================================================= */
 
 import { updateSettings } from './api.js';
-import { state, refreshSettings, refreshAll } from './store.js';
-import { getAccessKey, setAccessKey } from './supabase.js';
-import { APP_CONFIG } from './config.js';
-import { toast, getErrorMessage, formatDayKey, setBusy } from './ui.js';
+import { state, refreshAll, refreshSettings } from './store.js';
+import { APP_CONFIG, CONFIG_SOURCE_LABELS, saveConfigOverride, clearConfigOverride, readConfigOverride } from './config.js';
+import { getConfig, getAccessKey, setAccessKey, testConnection, applyRuntimeConfig } from './supabase.js';
+import { toast, getErrorMessage, formatDayKey, setBusy, esc } from './ui.js';
 
 let mounted = false;
 
 export function mountSettings() {
   if (mounted) return;
   mounted = true;
-  const form = document.getElementById('settings-form');
-  form?.addEventListener('submit', saveSettings);
-
-  const accessForm = document.getElementById('access-form');
-  accessForm?.addEventListener('submit', saveAccessKey);
+  document.getElementById('settings-form')?.addEventListener('submit', saveSettings);
+  document.getElementById('supabase-toggle')?.addEventListener('click', toggleSupabasePanel);
+  document.getElementById('supabase-save')?.addEventListener('click', saveSupabaseConfig);
+  document.getElementById('supabase-test')?.addEventListener('click', checkSupabase);
+  document.getElementById('supabase-reset')?.addEventListener('click', resetSupabaseConfig);
 }
 
+/* -------------------------------------------------------------------------- */
+/* LỊCH HỌC                                                                    */
+/* -------------------------------------------------------------------------- */
 export function renderSettings() {
   const s = state.settings;
-  if (!s) return;
-  const newInput = document.getElementById('set-new');
-  const maxInput = document.getElementById('set-max');
-  const timeInput = document.getElementById('set-time');
-  if (newInput) newInput.value = s.new_words_per_day;
-  if (maxInput) maxInput.value = s.max_words_per_day;
-  if (timeInput) timeInput.value = (s.preferred_study_time || '').slice(0, 5);
+  if (s) {
+    const newInput = document.getElementById('set-new');
+    const maxInput = document.getElementById('set-max');
+    const timeInput = document.getElementById('set-time');
+    if (newInput) newInput.value = s.new_words_per_day;
+    if (maxInput) maxInput.value = s.max_words_per_day;
+    if (timeInput) timeInput.value = (s.preferred_study_time || '').slice(0, 5);
 
-  const meta = document.getElementById('settings-meta');
-  if (meta) {
-    meta.textContent = s.study_start_date
-      ? `Bắt đầu học từ ${formatDayKey(s.study_start_date, { dateStyle: 'long' })}. Múi giờ lưu lịch: ${s.timezone}.`
-      : '';
+    const meta = document.getElementById('settings-meta');
+    if (meta) {
+      meta.textContent = s.study_start_date
+        ? `Bắt đầu học từ ${formatDayKey(s.study_start_date, { dateStyle: 'long' })}. Múi giờ lưu lịch: ${s.timezone}.`
+        : '';
+    }
   }
 
   const tz = document.getElementById('settings-timezone');
@@ -46,28 +50,7 @@ export function renderSettings() {
   const version = document.getElementById('settings-version');
   if (version) version.textContent = APP_CONFIG.version;
 
-  const keyInput = document.getElementById('set-access-key');
-  if (keyInput) keyInput.value = getAccessKey();
-}
-
-async function saveAccessKey(event) {
-  event.preventDefault();
-  const input = document.getElementById('set-access-key');
-  const button = document.getElementById('access-save');
-  const previous = getAccessKey();
-  const next = input.value.trim();
-  setBusy(button, true, 'Đang kiểm tra…');
-  try {
-    setAccessKey(next);
-    await refreshAll();
-    await refreshSettings();
-    toast(next ? 'Mã truy cập hợp lệ và đã được lưu.' : 'Đã xoá mã truy cập khỏi máy này.', 'success');
-  } catch (error) {
-    setAccessKey(previous);
-    toast(`Mã truy cập không đúng hoặc không kết nối được: ${getErrorMessage(error)}`, 'error', 5000);
-  } finally {
-    setBusy(button, false);
-  }
+  renderSupabaseInfo();
 }
 
 async function saveSettings(event) {
@@ -106,4 +89,137 @@ async function saveSettings(event) {
   } finally {
     setBusy(button, false);
   }
+}
+
+/* -------------------------------------------------------------------------- */
+/* KẾT NỐI SUPABASE                                                            */
+/* -------------------------------------------------------------------------- */
+function renderSupabaseInfo() {
+  const cfg = getConfig();
+  const urlDisplay = document.getElementById('sb-url-display');
+  const keyDisplay = document.getElementById('sb-key-display');
+  const source = document.getElementById('sb-source');
+  const status = document.getElementById('sb-status');
+
+  if (urlDisplay) urlDisplay.textContent = cfg?.supabaseUrl || 'Chưa cấu hình';
+  if (keyDisplay) {
+    const key = cfg?.supabaseAnonKey || '';
+    keyDisplay.textContent = key ? `${key.slice(0, 12)}…${key.slice(-6)} (${key.length} ký tự)` : 'Chưa cấu hình';
+    keyDisplay.title = key;
+  }
+  if (source) {
+    const override = readConfigOverride();
+    source.textContent = CONFIG_SOURCE_LABELS[override ? 'manual' : cfg?.source] || (cfg?.supabaseUrl ? 'Cấu hình mặc định' : '—');
+  }
+  if (status) {
+    status.innerHTML = cfg?.supabaseUrl && cfg?.supabaseAnonKey
+      ? `<span class="tag tag-green">Đã kết nối</span>`
+      : `<span class="tag tag-amber">Chưa cấu hình</span>`;
+  }
+}
+
+function fillSupabaseForm() {
+  const cfg = getConfig();
+  const urlInput = document.getElementById('set-sb-url');
+  const keyInput = document.getElementById('set-sb-key');
+  const accessInput = document.getElementById('set-access-key');
+  if (urlInput) urlInput.value = cfg?.supabaseUrl || '';
+  if (keyInput) keyInput.value = cfg?.supabaseAnonKey || '';
+  if (accessInput && !accessInput.value) accessInput.value = getAccessKey();
+}
+
+function toggleSupabasePanel() {
+  const panel = document.getElementById('supabase-panel');
+  const toggle = document.getElementById('supabase-toggle');
+  if (!panel) return;
+  // Chỉ mở khi panel đang ẩn thực sự.
+  const open = getComputedStyle(panel).display === 'none';
+  panel.hidden = !open;
+  toggle?.setAttribute('aria-expanded', String(open));
+  toggle.textContent = open ? 'Thu gọn' : 'Thay đổi';
+  if (open) {
+    fillSupabaseForm();
+    document.getElementById('set-sb-url')?.focus();
+  }
+}
+
+function readSupabaseForm() {
+  return {
+    url: document.getElementById('set-sb-url')?.value || '',
+    key: document.getElementById('set-sb-key')?.value || '',
+    accessKey: document.getElementById('set-access-key')?.value.trim() || '',
+  };
+}
+
+function feedback(message, type = 'info') {
+  const node = document.getElementById('supabase-feedback');
+  if (!node) return;
+  node.className = `small ${type === 'error' ? 'text-error' : type === 'success' ? 'text-ok' : 'muted'}`;
+  node.innerHTML = esc(message);
+}
+
+async function checkSupabase() {
+  const button = document.getElementById('supabase-test');
+  const { url, key, accessKey } = readSupabaseForm();
+  setBusy(button, true, 'Đang kiểm tra…');
+  feedback('Đang kết nối tới Supabase…');
+  try {
+    const result = await testConnection(url, key, accessKey);
+    feedback(result.message, result.ok ? 'success' : 'error');
+    toast(result.message, result.ok ? 'success' : 'error', 4000);
+  } catch (error) {
+    feedback(getErrorMessage(error), 'error');
+  } finally {
+    setBusy(button, false);
+  }
+}
+
+async function saveSupabaseConfig() {
+  const button = document.getElementById('supabase-save');
+  const { url, key, accessKey } = readSupabaseForm();
+  setBusy(button, true, 'Đang kiểm tra…');
+  feedback('Đang kiểm tra kết nối trước khi lưu…');
+
+  try {
+    const result = await testConnection(url, key, accessKey);
+    if (!result.ok && !result.needsKey) {
+      feedback(result.message, 'error');
+      toast(result.message, 'error', 5000);
+      return;
+    }
+
+    applyRuntimeConfig({ url, key });
+    const saved = saveConfigOverride({ url, key });
+    if (accessKey) setAccessKey(accessKey);
+
+    // Kết nối lại dữ liệu với cấu hình mới để kiểm tra lần cuối.
+    try {
+      await refreshSettings();
+      await refreshAll();
+      setBusy(button, false);
+      feedback(`Đã lưu cấu hình và kết nối thành công · ${state.rows.length} từ trong kho.`, 'success');
+      toast('Đã cập nhật kết nối Supabase.', 'success');
+      renderSettings();
+      document.getElementById('supabase-panel').hidden = true;
+      document.getElementById('supabase-toggle').textContent = 'Thay đổi';
+      document.getElementById('supabase-toggle').setAttribute('aria-expanded', 'false');
+    } catch (error) {
+      feedback(`Đã lưu cấu hình nhưng chưa đọc được dữ liệu: ${getErrorMessage(error)}`, 'error');
+      toast('Đã lưu cấu hình. Hãy kiểm tra mã truy cập hoặc file SQL.', 'error', 5000);
+    }
+    void saved;
+  } catch (error) {
+    feedback(getErrorMessage(error), 'error');
+    toast(getErrorMessage(error), 'error');
+  } finally {
+    setBusy(button, false);
+  }
+}
+
+async function resetSupabaseConfig() {
+  clearConfigOverride();
+  setAccessKey('');
+  feedback('Đã xoá cấu hình nhập tay. Tải lại trang để dùng cấu hình mặc định.', 'info');
+  toast('Đã xoá cấu hình trên máy này. Đang tải lại…', 'info', 1800);
+  setTimeout(() => location.reload(), 900);
 }
