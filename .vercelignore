@@ -14,3 +14,11 @@ Thumbs.db
 
 # Tests
 tests/tmp/
+CLAUDE.txt
+Data TỪ VỰNG HSK 3.0.xlsx
+HSK_Vocabulary_Formatted_With_Topics.csv
+words.csv
+samples/
+database/
+.kilo/
+.gitignore

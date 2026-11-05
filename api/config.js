@@ -2,13 +2,18 @@
  * Trả về URL + anon key (public) của Supabase để frontend khởi tạo client.
  * KHÔNG bao giờ trả về service_role key.
  */
+const DEFAULTS = {
+  SUPABASE_URL: 'https://ohicfsquvraayliscprg.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_maYsjTviq5zdUI5IVTTi3g_2rydIS3Q',
+};
+
 export default function handler(req, res) {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || DEFAULTS.SUPABASE_URL;
   const anonKey =
     process.env.SUPABASE_ANON_KEY ||
     process.env.VITE_SUPABASE_ANON_KEY ||
     process.env.SUPABASE_PUBLISHABLE_KEY ||
-    '';
+    DEFAULTS.SUPABASE_ANON_KEY;
 
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
